@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Store QR Code – {{ store.name }}{% endblock %}
+{% block content %}
+<div style="max-width:480px; margin:0 auto; text-align:center;">
+  <a href="/owner/dashboard" style="font-size:13px; color:var(--muted); display:block; text-align:left; margin-bottom:16px;">← Dashboard</a>
+
+  <h1 class="page-title">Store QR Code</h1>
+  <p class="page-subtitle">{{ store.name }} — Display this at your store entrance</p>
+
+  <div class="card" style="padding:36px; margin-bottom:20px;">
+    {% if qr_img %}
+      <img src="data:image/png;base64,{{ qr_img }}" alt="Store QR Code"
+           style="width:220px; height:220px; border-radius:12px; border:2px solid var(--border); display:block; margin:0 auto 20px;">
+    {% else %}
+      <!-- Fallback visual QR placeholder -->
+      <div style="width:220px; height:220px; border:3px solid var(--text); border-radius:12px; display:flex; align-items:center; justify-content:center; margin:0 auto 20px; background:white; font-family:monospace; font-size:11px; text-align:center; padding:16px; word-break:break-all; color:#1a1a1a;">
+        {{ qr_fallback }}
+      </div>
+    {% endif %}
+
+    <div style="font-size:13px; color:var(--muted); margin-bottom:8px;">QR Code Data:</div>
+    <div style="font-family:monospace; font-size:13px; background:var(--bg); padding:10px 14px; border-radius:8px; border:1px solid var(--border); word-break:break-all;">
+      {{ store.qr_code }}
+    </div>
+  </div>
+
+  <div class="card" style="background:var(--orange-light); border-color:var(--orange); text-align:left;">
+    <div style="font-weight:700; margin-bottom:8px;">📋 Instructions</div>
+    <ul style="font-size:13px; line-height:2; padding-left:16px;">
+      <li>Print this QR code and place it at your store entrance</li>
+      <li>Customers scan it when they arrive to pick up their order</li>
+      <li>You will see a notification when a customer scans</li>
+      <li>Confirm the handover after giving the goods</li>
+      <li>Both sides earn +10 trust points on completion</li>
+    </ul>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}My Points – ApnaDukaan{% endblock %}
+{% block content %}
+<h1 class="page-title">My Trust Points</h1>
+<p class="page-subtitle">{{ customer_name }}</p>
+
+<div class="grid3" style="margin-bottom:24px;">
+  <div class="stat-card" style="background:var(--ol);border-color:#F5C8A8;">
+    <div class="stat-num" style="color:var(--orange);">{{ points }}</div>
+    <div class="stat-label">Total Points</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num">{{ icon }}</div>
+    <div class="stat-label">{{ tier }} Tier</div>
+  </div>
+  <div class="stat-card" style="background:var(--yl);">
+    {% if cust_avg_rating %}
+    <div class="stat-num stars" style="font-size:24px;">{{ stars_html(cust_avg_rating) }}</div>
+    <div class="stat-label">Avg Store Rating · {{ cust_avg_rating }}/5 ({{ cust_rating_count }})</div>
+    {% else %}
+    <div class="stat-num" style="color:var(--muted);">—</div>
+    <div class="stat-label">Not yet rated by stores</div>
+    {% endif %}
+  </div>
+</div>
+
+{% if store_ratings %}
+<div class="card" style="margin-bottom:20px;">
+  <div style="font-weight:700;margin-bottom:14px;">⭐ Ratings You've Received from Stores</div>
+  {% for r in store_ratings %}
+  <div class="review-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:4px;">
+      <span style="font-weight:600;font-size:14px;">{{ r.store_name }}</span>
+      <span class="stars">{{ stars_html(r.rating) }}</span>
+    </div>
+    {% if r.body %}<p style="font-size:13px;color:var(--muted);">{{ r.body }}</p>{% endif %}
+    <div style="font-size:11px;color:var(--muted);margin-top:4px;">{{ r.created_at[:10] }}</div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="card">
+  <div style="font-weight:700;margin-bottom:16px;">📋 Points History</div>
+  {% if not transactions %}
+  <p style="color:var(--muted);text-align:center;padding:20px;">No transactions yet.</p>
+  {% else %}
+  <table class="table">
+    <thead><tr><th>Event</th><th>Points</th><th>Date</th></tr></thead>
+    <tbody>
+      {% for t in transactions %}
+      <tr>
+        <td>{{ t.event_type.replace('_',' ')|title }}{% if t.note %} — <span style="color:var(--muted);">{{ t.note }}</span>{% endif %}</td>
+        <td style="font-weight:700;color:{% if t.delta > 0 %}var(--green){% else %}var(--red){% endif %};">
+          {{ '+' if t.delta > 0 else '' }}{{ t.delta }}
+        </td>
+        <td style="color:var(--muted);font-size:12px;">{{ t.created_at[:16] }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

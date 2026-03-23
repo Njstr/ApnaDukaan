@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Products – {{ store.name }}{% endblock %}
+{% block content %}
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+  <div>
+    <h1 class="page-title">Products</h1>
+    <p class="page-subtitle">{{ store.name }} · {{ products|length }} product{{ 's' if products|length != 1 }}</p>
+  </div>
+  <a href="/owner/product/add" class="btn btn-primary">➕ Add Product</a>
+</div>
+
+{% if not products %}
+<div class="card" style="text-align:center;padding:48px;">
+  <div style="font-size:48px;margin-bottom:12px;">📦</div>
+  <div style="font-weight:600;font-size:18px;margin-bottom:8px;">No products yet</div>
+  <p style="color:var(--muted);margin-bottom:20px;">Add your first product to start receiving orders.</p>
+  <a href="/owner/product/add" class="btn btn-primary">➕ Add First Product</a>
+</div>
+{% else %}
+
+{% set cats = products | map(attribute='category') | unique | list %}
+{% for cat in cats %}
+<div class="card" style="margin-bottom:16px;padding:0;overflow:hidden;">
+  <div style="padding:12px 18px;background:var(--bg);border-bottom:1px solid var(--border);
+              font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);">
+    {{ cat }}
+  </div>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Product</th>
+        <th>Price</th>
+        <th>Unit</th>
+        <th>Status</th>
+        <th style="text-align:right;">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in products %}
+      {% if p.category == cat %}
+      <tr>
+        <td>
+          <div style="display:flex;align-items:center;gap:10px;">
+            {% if p.image_b64 %}
+            <img src="data:{{ p.image_mime }};base64,{{ p.image_b64 }}"
+                 style="width:72px;height:72px;border-radius:8px;object-fit:cover;" alt="{{ p.name }}">
+            {% else %}
+            <div style="width:72px;height:72px;border-radius:8px;background:var(--bg);
+                        display:flex;align-items:center;justify-content:center;font-size:26px;border:1px solid var(--border);">🛒</div>
+            {% endif %}
+            <div>
+              <div style="font-weight:600;">{{ p.name }}</div>
+              {% if p.brand %}<div style="font-size:12px;color:var(--muted);">{{ p.brand }}</div>{% endif %}
+            </div>
+          </div>
+        </td>
+        <td style="font-weight:600;color:var(--orange);">₹{{ "%.0f"|format(p.price) }}</td>
+        <td style="color:var(--muted);">{{ p.unit }}</td>
+        <td>
+          <form method="POST" action="/owner/product/{{ p.product_id }}/toggle" style="display:inline;">
+            <button class="badge {% if p.available %}badge-green{% else %}badge-red{% endif %}"
+                    type="submit" style="cursor:pointer;border:none;">
+              {% if p.available %}✓ Available{% else %}✗ Hidden{% endif %}
+            </button>
+          </form>
+        </td>
+        <td style="text-align:right;">
+          <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;">
+            <a href="/owner/product/{{ p.product_id }}/edit" class="btn btn-outline btn-sm">✏️ Edit</a>
+            <form method="POST" action="/owner/product/{{ p.product_id }}/delete"
+                  onsubmit="return confirm('Delete {{ p.name }}? This cannot be undone.')">
+              <button class="btn btn-sm" style="background:var(--rl);color:var(--red);border:none;" type="submit">🗑</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

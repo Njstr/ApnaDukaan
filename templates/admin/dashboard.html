@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard – ApnaDukaan{% endblock %}
+{% block content %}
+<h1 class="page-title">Admin Dashboard</h1>
+<div class="grid3" style="margin-bottom:24px;">
+  {% for k,v in stats.items() %}
+  <div class="stat-card"><div class="stat-num">{{ v }}</div><div class="stat-label">{{ k|capitalize }}</div></div>
+  {% endfor %}
+</div>
+<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;">
+  <a href="/control-panel/owners" class="btn btn-outline">👥 Owners</a>
+  <a href="/control-panel/stores" class="btn btn-outline">🏪 Stores</a>
+  <a href="/control-panel/orders" class="btn btn-outline">📦 Orders</a>
+  <a href="/control-panel/customers" class="btn btn-outline">👤 Customers</a>
+  <a href="/control-panel/reviews" class="btn btn-outline">⭐ Reviews</a>
+  <a href="/control-panel/notifications" class="btn btn-outline">🔔 Notifications</a>
+  <a href="/control-panel/settings" class="btn btn-outline">⚙ Settings</a>
+  <a href="/control-panel/logout" class="btn btn-danger btn-sm">Logout</a>
+</div>
+<div class="card" style="padding:0;overflow:hidden;">
+  <div style="padding:12px 18px;font-weight:700;border-bottom:1px solid var(--border);">Recent Orders</div>
+  <table class="table">
+    <thead><tr><th>Order</th><th>Store</th><th>Customer</th><th>Status</th><th>Total</th><th>Date</th></tr></thead>
+    <tbody>
+      {% for o in recent_orders %}
+      <tr>
+        <td style="font-family:monospace;font-size:13px;">{{ o.order_id }}</td>
+        <td>{{ o.store_name }}</td>
+        <td>{{ o.customer_name }}</td>
+        <td><span class="badge status-{{ o.status }}">{{ o.status }}</span></td>
+        <td>₹{{ "%.0f"|format(o.total_amount) }}</td>
+        <td style="font-size:12px;color:var(--muted);">{{ o.placed_at[:10] }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

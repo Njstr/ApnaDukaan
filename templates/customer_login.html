@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Enter Your Name – ApnaDukaan{% endblock %}
+{% block content %}
+<div style="max-width:440px; margin:60px auto;">
+  <div class="card" style="padding:36px;">
+    <div style="text-align:center; margin-bottom:28px;">
+      <div style="font-size:44px; margin-bottom:10px;">👋</div>
+      <h1 style="font-size:22px; font-weight:700;">Welcome, Customer</h1>
+      <p style="font-size:14px; color:var(--muted); margin-top:4px;">Enter your name to start shopping</p>
+    </div>
+    <form method="POST">
+      <div class="form-group">
+        <label class="form-label">Your Name</label>
+        <input class="form-input" name="name" type="text" placeholder="e.g. Rohan Verma" autofocus required style="font-size:16px; padding:12px 16px;">
+      </div>
+      <button class="btn btn-primary" type="submit" style="width:100%; justify-content:center; padding:12px;">
+        Browse Stores →
+      </button>
+    </form>
+    <div style="text-align:center; margin-top:16px;">
+      <a href="/" style="font-size:13px; color:var(--muted);">← Back to Home</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

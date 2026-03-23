@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Dashboard – {{ store.name }}{% endblock %}
+{% block content %}
+<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+  <div>
+    <h1 class="page-title">{{ store.name }}</h1>
+    <p class="page-subtitle">
+      {{ store.category }} · 
+      {% if store.is_open %}<span style="color:var(--green);font-weight:600;">● Open</span>
+      {% else %}<span style="color:var(--red);font-weight:600;">○ Closed</span>{% endif %}
+      {% if avg_rating %} ·
+        <span class="stars" style="font-size:14px;">{{ stars_html(avg_rating) }}</span>
+        <span>{{ avg_rating }}/5 ({{ rating_count }})</span>
+      {% endif %}
+    </p>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <a href="/owner/product/add" class="btn btn-success btn-sm">➕ Add Product</a>
+    <a href="/owner/store/settings" class="btn btn-outline btn-sm">⚙ Settings</a>
+    <a href="/owner/qr" class="btn btn-outline btn-sm">📱 QR Code</a>
+  </div>
+</div>
+
+<div class="grid4" style="margin-bottom:24px;">
+  <div class="stat-card">
+    <div class="stat-num" style="color:var(--orange);">{{ store_points }}</div>
+    <div class="stat-label">Trust Points {{ icon }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num">{{ analytics.total_orders if analytics else 0 }}</div>
+    <div class="stat-label">Total Orders</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num" style="color:var(--green);">{{ analytics.completed_orders if analytics else 0 }}</div>
+    <div class="stat-label">Completed</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num" style="color:var(--green);">₹{{ "%.0f"|format(analytics.total_revenue if analytics else 0) }}</div>
+    <div class="stat-label">Revenue</div>
+  </div>
+</div>
+
+<h2 style="font-size:16px;font-weight:700;margin-bottom:12px;">📦 Today's Orders</h2>
+<div class="grid4" style="margin-bottom:20px;">
+  {% for label, lst, color in [('Pending', pending, '--yellow'),('Ready', ready, '--green'),('Visited', visited, '--orange'),('Completed', completed, '--blue')] %}
+  <div class="stat-card" style="background:var({{ color }});border:none;opacity:.9;">
+    <div class="stat-num">{{ lst|length }}</div>
+    <div class="stat-label">{{ label }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if pending %}
+<div class="card" style="margin-bottom:16px;">
+  <div style="font-weight:700;margin-bottom:12px;">⏳ Pending Orders</div>
+  {% for o in pending %}
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
+              padding:10px 0;border-bottom:1px solid var(--border);">
+    <div>
+      <span style="font-family:monospace;font-weight:600;">{{ o.order_id }}</span>
+      <span style="font-size:13px;color:var(--muted);margin-left:8px;">{{ o.customer_name }}</span>
+      <span class="badge status-{{ o.status }}" style="margin-left:6px;">{{ o.status|title }}</span>
+    </div>
+    <form method="POST" action="/owner/order/{{ o.order_id }}/ready">
+      <button class="btn btn-sm btn-success" type="submit">✓ Mark Ready</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if visited %}
+<div class="card" style="margin-bottom:16px;">
+  <div style="font-weight:700;margin-bottom:12px;">🧑‍💼 Awaiting Handover Confirmation</div>
+  {% for o in visited %}
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
+              padding:10px 0;border-bottom:1px solid var(--border);">
+    <div>
+      <span style="font-family:monospace;font-weight:600;">{{ o.order_id }}</span>
+      <span style="font-size:13px;color:var(--muted);margin-left:8px;">{{ o.customer_name }}</span>
+    </div>
+    <form method="POST" action="/owner/order/{{ o.order_id }}/confirm">
+      <button class="btn btn-sm btn-primary" type="submit">Confirm Handover</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if peak_slots %}
+<div class="card">
+  <div style="font-weight:700;margin-bottom:12px;">📊 Peak Time Slots</div>
+  {% for slot, count in peak_slots.items() %}
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+    <span style="font-size:13px;min-width:160px;">{{ slot }}</span>
+    <div style="flex:1;background:var(--bg);border-radius:4px;height:8px;overflow:hidden;">
+      <div style="height:100%;background:var(--orange);border-radius:4px;width:{{ [count * 20, 100]|min }}%;"></div>
+    </div>
+    <span style="font-size:13px;font-weight:600;color:var(--orange);">{{ count }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

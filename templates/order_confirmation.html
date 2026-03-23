@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Order Placed – ApnaDukaan{% endblock %}
+{% block content %}
+<div style="max-width:520px; margin:0 auto; text-align:center; padding-top:20px;">
+  <div style="font-size:64px; margin-bottom:12px;">✅</div>
+  <h1 style="font-size:24px; font-weight:700; margin-bottom:6px;">Order Placed!</h1>
+  <p style="font-size:15px; color:var(--muted); margin-bottom:28px;">Your goods will be ready at the store during your selected time slot.</p>
+
+  <div class="card" style="text-align:left; margin-bottom:16px;">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+      <div>
+        <div style="font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; margin-bottom:2px;">Order ID</div>
+        <div style="font-weight:700; font-size:15px; color:var(--orange);">{{ order.order_id }}</div>
+      </div>
+      <div>
+        <div style="font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; margin-bottom:2px;">Store</div>
+        <div style="font-weight:600;">{{ order.store_name }}</div>
+      </div>
+      <div>
+        <div style="font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; margin-bottom:2px;">Pickup Date</div>
+        <div style="font-weight:600;">📅 {{ order.pickup_date }}</div>
+      </div>
+      <div>
+        <div style="font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; margin-bottom:2px;">Pickup Slot</div>
+        <div style="font-weight:600;">⏰ {{ order.slot_label }}</div>
+      </div>
+      <div>
+        <div style="font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; margin-bottom:2px;">Total</div>
+        <div style="font-weight:700; font-size:16px;">₹{{ "%.0f"|format(order.total_amount) }}</div>
+      </div>
+    </div>
+    <hr class="divider" style="margin:12px 0;">
+    {% for item in items %}
+    <div style="display:flex; justify-content:space-between; font-size:14px; padding:4px 0;">
+      <span>{{ item.product_name }} × {{ item.quantity }}</span>
+      <span style="font-weight:600;">₹{{ "%.0f"|format(item.subtotal) }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="card" style="background:var(--orange-light); border-color:var(--orange); margin-bottom:24px;">
+    <div style="font-weight:700; margin-bottom:8px;">📋 What happens next?</div>
+    <ol style="text-align:left; font-size:14px; line-height:2; padding-left:18px; color:var(--text);">
+      <li>Store will prepare your order during the slot</li>
+      <li>Visit the store in your time slot</li>
+      <li>Open app → Scan Store QR code</li>
+      <li>Confirm you received your items</li>
+      <li>Both you and the store earn points! 🎉</li>
+    </ol>
+  </div>
+
+  <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+    <a href="/scan" class="btn btn-primary">📷 Scan Store QR Now</a>
+    <a href="/my-orders" class="btn btn-outline">My Orders</a>
+  </div>
+</div>
+{% endblock %}

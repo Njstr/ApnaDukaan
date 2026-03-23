@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Confirm Receipt – ApnaDukaan{% endblock %}
+{% block content %}
+<div style="max-width:520px; margin:0 auto;">
+  <h1 class="page-title">Confirm Receipt</h1>
+  <p class="page-subtitle">Confirm you have received your goods</p>
+
+  <div class="card" style="margin-bottom:16px;">
+    <div style="font-weight:700; font-size:15px; margin-bottom:14px;">📦 Order {{ order.order_id }}</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">
+      <div><div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;">Store</div><div style="font-weight:600;">{{ order.store_name }}</div></div>
+      <div><div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;">Slot</div><div style="font-weight:600;">{{ order.slot_label }}</div></div>
+      <div><div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;">Total</div><div style="font-weight:700;font-size:16px;">₹{{ "%.0f"|format(order.total_amount) }}</div></div>
+      <div><div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;">Status</div><span class="badge status-{{ order.status }}">{{ order.status|title }}</span></div>
+    </div>
+    <hr class="divider" style="margin:12px 0;">
+    {% for item in items %}
+    <div style="display:flex; justify-content:space-between; font-size:14px; padding:4px 0;">
+      <span>{{ item.product_name }} × {{ item.quantity }}</span>
+      <span style="font-weight:600;">₹{{ "%.0f"|format(item.subtotal) }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div style="display:flex; gap:10px; margin-bottom:12px;">
+    <div class="card card-sm" style="flex:1; text-align:center;">
+      <div style="font-size:20px;">{% if order.visit_verified %}✅{% else %}⏳{% endif %}</div>
+      <div style="font-size:12px; color:var(--muted); margin-top:4px;">Visit Verified</div>
+    </div>
+    <div class="card card-sm" style="flex:1; text-align:center;">
+      <div style="font-size:20px;">{% if order.customer_confirmed %}✅{% else %}⏳{% endif %}</div>
+      <div style="font-size:12px; color:var(--muted); margin-top:4px;">You Confirmed</div>
+    </div>
+    <div class="card card-sm" style="flex:1; text-align:center;">
+      <div style="font-size:20px;">{% if order.store_confirmed %}✅{% else %}⏳{% endif %}</div>
+      <div style="font-size:12px; color:var(--muted); margin-top:4px;">Store Confirmed</div>
+    </div>
+  </div>
+
+  {% if not order.customer_confirmed %}
+  <form method="POST">
+    <div class="card" style="background:var(--green-light); border-color:var(--green); margin-bottom:14px; padding:16px;">
+      <div style="font-weight:700; margin-bottom:4px;">Tap below to confirm you received your order</div>
+      <div style="font-size:13px; color:var(--muted);">This earns both you and the store +10 points (when store also confirms)</div>
+    </div>
+    <button class="btn btn-success" type="submit" style="width:100%; justify-content:center; padding:14px; font-size:15px;">
+      ✓ I Received My Order
+    </button>
+  </form>
+  {% else %}
+  <div class="card" style="background:var(--green-light); border-color:var(--green); text-align:center; padding:24px;">
+    <div style="font-size:32px; margin-bottom:8px;">✅</div>
+    <div style="font-weight:700;">You've confirmed receipt!</div>
+    <div style="font-size:13px; color:var(--muted); margin-top:4px;">Waiting for store owner to confirm handover</div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

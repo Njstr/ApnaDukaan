@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Store Settings – ApnaDukaan{% endblock %}
+{% block head %}
+<style>
+.img-drop{border:2px dashed var(--border);border-radius:10px;padding:24px;text-align:center;
+  cursor:pointer;transition:border-color .15s;background:var(--bg);}
+.img-drop:hover{border-color:var(--orange);}
+</style>
+{% endblock %}
+{% block content %}
+<div style="margin-bottom:14px;"><a href="/owner/dashboard" style="font-size:13px;color:var(--muted);">← Dashboard</a></div>
+<h1 class="page-title">Store Settings</h1>
+<p class="page-subtitle">{{ store.name }}</p>
+
+<form method="POST" action="/owner/store/settings" enctype="multipart/form-data">
+  <div class="grid2" style="gap:24px;align-items:start;">
+
+    {# ── LEFT: Core info ── #}
+    <div>
+      <div class="card" style="margin-bottom:16px;">
+        <div style="font-weight:700;margin-bottom:14px;">🏪 Store Info</div>
+
+        <div class="form-group">
+          <label class="form-label">Store Name *</label>
+          <input class="form-input" name="name" value="{{ store.name }}" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Address</label>
+          <input class="form-input" name="address" value="{{ store.address }}">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <select class="form-select" name="category">
+            {% for c in categories %}
+            <option value="{{ c }}" {% if store.category == c %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Description <span style="font-weight:400;color:var(--muted);">(shown on store card)</span></label>
+          <textarea class="form-textarea" name="description" style="min-height:90px;"
+                    placeholder="Briefly describe your store — what you sell, quality, timings, etc.">{{ store.description or '' }}</textarea>
+        </div>
+
+        <div class="form-group" style="margin-bottom:0;">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+            <input type="checkbox" name="is_open" {% if store.is_open %}checked{% endif %}
+                   style="width:16px;height:16px;accent-color:var(--orange);">
+            <span style="font-size:14px;font-weight:600;">Store is Open</span>
+          </label>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" type="submit" style="width:100%;">💾 Save Settings</button>
+    </div>
+
+    {# ── RIGHT: Store image ── #}
+    <div>
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:14px;">🖼 Store Photo</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">
+          This image appears at the top of your store card in the browse list and on your store page.
+          Recommended: a wide photo of your shopfront or inside. Max 2 MB.
+        </p>
+
+        <div class="img-drop" onclick="document.getElementById('store-img-inp').click()">
+          <div style="font-size:28px;margin-bottom:6px;">📷</div>
+          <div style="font-size:13px;font-weight:600;">Click to upload store photo</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">JPEG · PNG · WebP · max 2 MB</div>
+        </div>
+        <input type="file" id="store-img-inp" name="image" accept="image/*" style="display:none"
+               onchange="previewStoreImg(this)">
+
+        {% if store.image_b64 %}
+        <img src="data:{{ store.image_mime }};base64,{{ store.image_b64 }}"
+             id="store-img-preview"
+             style="width:100%;border-radius:10px;object-fit:cover;max-height:200px;margin-top:12px;"
+             alt="Store photo">
+        <div style="font-size:12px;color:var(--muted);margin-top:6px;">Current photo — upload a new one to replace it.</div>
+        {% else %}
+        <img id="store-img-preview" style="display:none;width:100%;border-radius:10px;object-fit:cover;max-height:200px;margin-top:12px;" alt="">
+        <div style="font-size:12px;color:var(--muted);margin-top:10px;">No photo uploaded yet.</div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</form>
+
+<script>
+function previewStoreImg(inp) {
+  const file = inp.files[0]; if (!file) return;
+  if (file.size > 2 * 1024 * 1024) { alert('Image must be under 2 MB.'); inp.value = ''; return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const el = document.getElementById('store-img-preview');
+    el.src = e.target.result;
+    el.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+</script>
+{% endblock %}

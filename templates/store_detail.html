@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% block title %}{{ store.name }} – ApnaDukaan{% endblock %}
+{% block head %}
+<style>
+.qty-btn{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--border);background:var(--bg);
+  cursor:pointer;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+.qty-btn:hover{border-color:var(--orange);color:var(--orange);}
+.prod-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);}
+.prod-row:last-child{border-bottom:none;}
+#cart-float{position:fixed;bottom:20px;right:20px;z-index:200;display:none;}
+.star-input{display:flex;flex-direction:row-reverse;gap:4px;}
+.star-input label{font-size:24px;cursor:pointer;color:#D1D5DB;transition:color .1s;}
+.star-input input[type=radio]{display:none;}
+.star-input input[type=radio]:checked ~ label,
+.star-input label:hover,
+.star-input label:hover ~ label{color:#F59E0B;}
+</style>
+{% endblock %}
+{% block content %}
+<div style="margin-bottom:16px;"><a href="/stores" style="font-size:13px;color:var(--muted);">← All Stores</a></div>
+
+{% if store.image_b64 %}
+<div style="margin-bottom:20px;border-radius:16px;overflow:hidden;border:1px solid var(--border);box-shadow:var(--sh);max-height:260px;">
+  <img src="data:{{ store.image_mime }};base64,{{ store.image_b64 }}"
+       alt="{{ store.name }}"
+       style="width:100%;height:260px;object-fit:cover;display:block;">
+</div>
+{% endif %}
+
+<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+  <div>
+    <h1 class="page-title">{{ store.name }}</h1>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:6px;">📍 {{ store.address }}</div>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:{% if store.description %}8px{% else %}0{% endif %};">
+      <span class="tag">{{ store.category }}</span>
+    </div>
+    {% if store.description %}
+    <p style="font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:4px;">{{ store.description }}</p>
+    {% endif %}
+    <span class="badge badge-green" style="margin-left:6px;">● Open</span>
+    {% if avg_rating %}
+    <span style="margin-left:10px;" class="stars">{{ stars_html(avg_rating) }}</span>
+    <span style="font-size:13px;color:var(--muted);"> {{ avg_rating }}/5 ({{ rating_count }} reviews)</span>
+    {% endif %}
+  </div>
+  <div class="points-pill">⭐ {{ store_points }} pts · {{ tier_icon }}</div>
+</div>
+<hr class="divider">
+
+{% if ai_summary %}
+<div class="ai-summary">
+  <div class="ai-summary-title">✨ AI Summary of Reviews</div>
+  <p style="font-size:14px;line-height:1.65;color:var(--text);">{{ ai_summary }}</p>
+</div>
+{% endif %}
+
+{% for cat, prods in categories.items() %}
+<div class="card" style="margin-bottom:16px;padding:16px 20px;">
+  <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">{{ cat }}</div>
+  {% for p in prods %}
+  <div class="prod-row" data-pid="{{ p.product_id }}" data-price="{{ p.price }}">
+    <div style="display:flex;align-items:center;gap:12px;flex:1;">
+      {% if p.image_b64 %}
+      <a href="/product/{{ p.product_id }}"><img src="data:{{ p.image_mime }};base64,{{ p.image_b64 }}" style="width:88px;height:88px;border-radius:10px;object-fit:cover;flex-shrink:0;" alt="{{ p.name }}"></a>
+      {% else %}
+      <a href="/product/{{ p.product_id }}" style="width:88px;height:88px;border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;border:1px solid var(--border);">🛒</a>
+      {% endif %}
+      <div>
+        <a href="/product/{{ p.product_id }}" style="font-weight:600;font-size:15px;color:var(--text);">{{ p.name }}</a>
+        {% if p.avg_rating %}<div class="stars" style="font-size:12px;">{{ stars_html(p.avg_rating) }} <span style="color:var(--muted);font-family:sans-serif;">{{ p.avg_rating }}</span></div>{% endif %}
+        <div style="font-size:13px;color:var(--muted);">₹{{ "%.0f"|format(p.price) }} / {{ p.unit }}</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button class="qty-btn" onclick="changeQty('{{ p.product_id }}','{{ p.name }}',{{ p.price }},'{{ p.unit }}','{{ store.store_id }}',-1)">−</button>
+      <span style="font-size:15px;font-weight:700;min-width:20px;text-align:center;" id="qty-{{ p.product_id }}">{{ cart.get(p.product_id, {}).get('qty', 0)|int }}</span>
+      <button class="qty-btn" onclick="changeQty('{{ p.product_id }}','{{ p.name }}',{{ p.price }},'{{ p.unit }}','{{ store.store_id }}',1)">+</button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endfor %}
+
+<!-- Store Reviews -->
+<div class="card" style="margin-bottom:16px;">
+  <div style="font-weight:700;font-size:15px;margin-bottom:14px;">⭐ Customer Reviews</div>
+  {% if has_completed_order %}
+    {% if not existing_store_review %}
+    <div style="background:var(--gl);border:1px solid #B8E8D8;border-radius:8px;padding:14px;margin-bottom:16px;">
+      <div style="font-weight:600;margin-bottom:10px;font-size:14px;">Leave a Review</div>
+      <form method="POST" action="/review/submit">
+        <input type="hidden" name="target_type" value="store">
+        <input type="hidden" name="target_id" value="{{ store.store_id }}">
+        <input type="hidden" name="redirect_to" value="/store/{{ store.store_id }}">
+        <div style="margin-bottom:10px;">
+          <div class="star-input" style="justify-content:flex-start;">
+            {% for i in range(5,0,-1) %}
+            <input type="radio" name="rating" id="sr{{ i }}" value="{{ i }}" {% if i==5 %}checked{% endif %}>
+            <label for="sr{{ i }}">★</label>
+            {% endfor %}
+          </div>
+        </div>
+        <textarea class="form-textarea" name="body" placeholder="Share your experience..." style="margin-bottom:10px;min-height:70px;"></textarea>
+        <button class="btn btn-success btn-sm" type="submit">Submit Review</button>
+      </form>
+    </div>
+    {% else %}
+    <div style="background:var(--ol);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;">
+      Your review: <span class="stars">{{ stars_html(existing_store_review.rating) }}</span>
+      <form method="POST" action="/review/{{ existing_store_review.review_id }}/delete" style="display:inline;margin-left:8px;">
+        <input type="hidden" name="redirect_to" value="/store/{{ store.store_id }}">
+        <button type="submit" class="btn btn-sm" style="background:var(--rl);color:var(--red);border:none;padding:3px 8px;" onclick="return confirm('Delete review?')">Delete</button>
+      </form>
+    </div>
+    {% endif %}
+  {% else %}
+  <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Complete an order to leave a review.</p>
+  {% endif %}
+
+  {% if not reviews %}
+  <p style="text-align:center;color:var(--muted);font-size:14px;padding:20px;">No reviews yet.</p>
+  {% endif %}
+  {% for r in reviews %}
+  <div class="review-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+      <div style="font-weight:600;font-size:14px;">{{ r.reviewer_id }}</div>
+      <span class="stars" style="font-size:13px;">{{ stars_html(r.rating) }}</span>
+    </div>
+    {% if r.body %}<p style="font-size:13px;color:var(--muted);">{{ r.body }}</p>{% endif %}
+    <div style="font-size:11px;color:var(--muted);margin-top:4px;">{{ r.created_at[:10] }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Float cart button -->
+<div id="cart-float">
+  <a href="/checkout/{{ store.store_id }}" class="btn btn-primary" id="cart-btn" style="font-size:15px;padding:14px 24px;border-radius:30px;box-shadow:0 4px 20px rgba(232,93,36,.35);">
+    🛒 View Cart · ₹<span id="cart-total-float">0</span>
+  </a>
+</div>
+
+<script>
+// Track per-store cart total entirely in JS so it always reflects reality
+// even after a previous order cleared the session cart for this store.
+const STORE_ID = '{{ store.store_id }}';
+let storeTotal = 0;
+let storeCount = 0;
+
+// Seed from server-rendered session cart (0 if cart was just cleared)
+{% if cart %}{% for pid, v in cart.items() %}{% if v.store_id == store.store_id %}
+storeTotal += {{ v.price * v.qty }};
+storeCount += 1;
+{% endif %}{% endfor %}{% endif %}
+
+function updateFloatBtn() {
+  const floatEl = document.getElementById('cart-float');
+  const totalEl = document.getElementById('cart-total-float');
+  if (storeCount > 0) {
+    floatEl.style.display = 'block';
+    totalEl.textContent = Math.round(storeTotal * 100) / 100;
+  } else {
+    floatEl.style.display = 'none';
+    totalEl.textContent = '0';
+  }
+}
+
+function changeQty(pid, name, price, unit, storeId, delta) {
+  const el = document.getElementById('qty-' + pid);
+  const cur = parseInt(el.textContent) || 0;
+  const nq  = Math.max(0, cur + delta);
+  const diff = nq - cur;
+
+  fetch('/cart/add', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({product_id: pid, name, price, unit, store_id: storeId, qty: nq})
+  }).then(r => r.json()).then(d => {
+    if (d.error) { alert(d.error); return; }
+    el.textContent = nq;
+    // Update local store total (not global cart total)
+    storeTotal += diff * price;
+    if (diff > 0 && cur === 0) storeCount++;
+    if (nq === 0) { storeCount = Math.max(0, storeCount - 1); storeTotal = Math.max(0, storeTotal); }
+    // Recompute clean total from all visible qty elements (price is in data-price)
+    storeTotal = 0; storeCount = 0;
+    document.querySelectorAll('.prod-row[data-pid]').forEach(row => {
+      const qtyEl = document.getElementById('qty-' + row.dataset.pid);
+      if (!qtyEl) return;
+      const priceVal = parseFloat(row.dataset.price) || 0;
+      const qty = parseInt(qtyEl.textContent) || 0;
+      if (qty > 0) { storeTotal += priceVal * qty; storeCount++; }
+    });
+    updateFloatBtn();
+  });
+}
+
+// Init on normal load
+document.addEventListener('DOMContentLoaded', updateFloatBtn);
+
+// Reset when page is restored from browser back/forward cache
+window.addEventListener('pageshow', function(e) {
+  if (e.persisted) {
+    // Page came from bfcache — re-fetch current cart state from server
+    fetch('/cart/state')
+      .then(r => r.json())
+      .then(d => {
+        // If server cart is empty for this store, reset all qty displays
+        if (d.cart_count === 0) {
+          storeTotal = 0; storeCount = 0;
+          document.querySelectorAll('.prod-row[data-pid]').forEach(row => {
+            const qtyEl = document.getElementById('qty-' + row.dataset.pid);
+            if (qtyEl) qtyEl.textContent = '0';
+          });
+          updateFloatBtn();
+        }
+      }).catch(() => {});
+  }
+});
+</script>
+{% endblock %}

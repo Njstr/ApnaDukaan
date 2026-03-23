@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Owners – Admin{% endblock %}
+{% block content %}
+<div class="admin-back">
+  <a href="/control-panel/">← Dashboard</a>
+  <span class="admin-breadcrumb">Admin › Owners</span>
+</div>
+<h1 class="page-title">Store Owners</h1>
+<div class="card" style="padding:0;overflow:hidden;">
+  <table class="table">
+    <thead><tr><th>Username</th><th>Full Name</th><th>Store</th><th>Status</th><th>Joined</th><th></th></tr></thead>
+    <tbody>
+      {% for o in owners %}
+      <tr>
+        <td style="font-weight:600;">{{ o.username }}</td>
+        <td>{{ o.full_name }}</td>
+        <td>{{ o.store_name or '—' }}</td>
+        <td>{% if o.is_active %}<span class="badge badge-green">Active</span>{% else %}<span class="badge badge-red">Disabled</span>{% endif %}</td>
+        <td style="font-size:12px;color:var(--muted);">{{ o.created_at[:10] }}</td>
+        <td>
+          <form method="POST" action="/control-panel/owners/{{ o.owner_id }}/toggle">
+            <button class="btn btn-sm btn-outline" type="submit">Toggle</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

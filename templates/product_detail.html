@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% block title %}{{ product.name }} – ApnaDukaan{% endblock %}
+{% block head %}
+<style>
+.star-input{display:flex;flex-direction:row-reverse;gap:4px;}
+.star-input label{font-size:26px;cursor:pointer;color:#D1D5DB;transition:color .1s;}
+.star-input input[type=radio]{display:none;}
+.star-input input[type=radio]:checked ~ label,
+.star-input label:hover,
+.star-input label:hover ~ label{color:#F59E0B;}
+.prod-chip{display:flex;align-items:center;gap:10px;padding:12px;border:1.5px solid var(--border);
+  border-radius:10px;transition:border-color .15s;cursor:pointer;}
+.prod-chip:hover{border-color:var(--orange);}
+.qty-btn{width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--bg);
+  cursor:pointer;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+.qty-btn:hover{border-color:var(--orange);color:var(--orange);}
+</style>
+{% endblock %}
+{% block content %}
+<div style="margin-bottom:14px;">
+  <a href="/store/{{ product.store_id }}" style="font-size:13px;color:var(--muted);">← {{ product.store_name }}</a>
+</div>
+
+<div class="grid2" style="gap:28px;align-items:start;">
+  <!-- Left: Image -->
+  <div>
+    {% if product.image_b64 %}
+    <img src="data:{{ product.image_mime }};base64,{{ product.image_b64 }}"
+         alt="{{ product.name }}"
+         style="width:100%;border-radius:14px;object-fit:cover;max-height:440px;box-shadow:var(--sh);cursor:zoom-in;"
+         onclick="this.style.maxHeight=this.style.maxHeight==='none'?'440px':'none'">
+    {% else %}
+    <div style="width:100%;height:340px;background:var(--bg);border-radius:14px;
+                display:flex;align-items:center;justify-content:center;
+                font-size:80px;border:1px solid var(--border);">🛒</div>
+    {% endif %}
+  </div>
+
+  <!-- Right: Info -->
+  <div>
+    <div style="margin-bottom:4px;">
+      <span class="tag">{{ product.category }}</span>
+      {% if product.brand %}<span class="tag" style="margin-left:4px;">{{ product.brand }}</span>{% endif %}
+    </div>
+    <h1 style="font-size:26px;font-weight:700;margin:8px 0 6px;">{{ product.name }}</h1>
+
+    {% if avg_rating %}
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+      <span class="stars" style="font-size:18px;">{{ stars_html(avg_rating) }}</span>
+      <span style="font-weight:600;">{{ avg_rating }}</span>
+      <span style="color:var(--muted);font-size:13px;">({{ rating_count }} review{{ 's' if rating_count != 1 }})</span>
+    </div>
+    {% else %}
+    <div style="color:var(--muted);font-size:13px;margin-bottom:10px;">No reviews yet</div>
+    {% endif %}
+
+    <div style="font-size:32px;font-weight:700;color:var(--orange);margin-bottom:6px;">₹{{ "%.0f"|format(product.price) }}</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px;">per {{ product.unit }}</div>
+
+    {% if product.description %}
+    <p style="font-size:14px;line-height:1.7;color:#3A3530;margin-bottom:18px;">{{ product.description }}</p>
+    {% endif %}
+
+    {% if product.is_open %}
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button class="qty-btn" onclick="changeQty(-1)" id="btn-minus">−</button>
+      <span style="font-size:18px;font-weight:700;min-width:28px;text-align:center;" id="qty-disp">
+        {{ cart.get(product.product_id, {}).get('qty', 0)|int }}</span>
+      <button class="qty-btn" onclick="changeQty(1)">+</button>
+      <a href="/checkout/{{ product.store_id }}" class="btn btn-primary" style="flex:1;" id="checkout-btn">
+        🛒 Checkout
+      </a>
+    </div>
+    <div id="cart-msg" style="font-size:13px;color:var(--green);margin-top:8px;min-height:20px;"></div>
+    {% else %}
+    <div class="badge badge-red" style="font-size:14px;padding:8px 16px;">Store is currently closed</div>
+    {% endif %}
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- Specs Table -->
+{% set has_specs = product.brand or product.model or product.origin or product.dimensions or product.weight or product.material or product.spec1_key %}
+{% if has_specs %}
+<div class="card" style="margin-bottom:20px;">
+  <div style="font-weight:700;font-size:15px;margin-bottom:14px;">📋 Product Details</div>
+  <table class="spec-table">
+    {% if product.brand %}<tr><td>Brand</td><td>{{ product.brand }}</td></tr>{% endif %}
+    {% if product.model %}<tr><td>Model</td><td>{{ product.model }}</td></tr>{% endif %}
+    {% if product.origin %}<tr><td>Country of Origin</td><td>{{ product.origin }}</td></tr>{% endif %}
+    {% if product.dimensions %}<tr><td>Dimensions</td><td>{{ product.dimensions }}</td></tr>{% endif %}
+    {% if product.weight %}<tr><td>Weight</td><td>{{ product.weight }}</td></tr>{% endif %}
+    {% if product.material %}<tr><td>Material</td><td>{{ product.material }}</td></tr>{% endif %}
+    {% if product.spec1_key %}<tr><td>{{ product.spec1_key }}</td><td>{{ product.spec1_val }}</td></tr>{% endif %}
+    {% if product.spec2_key %}<tr><td>{{ product.spec2_key }}</td><td>{{ product.spec2_val }}</td></tr>{% endif %}
+    {% if product.spec3_key %}<tr><td>{{ product.spec3_key }}</td><td>{{ product.spec3_val }}</td></tr>{% endif %}
+  </table>
+</div>
+{% endif %}
+
+<!-- Frequently Bought Together -->
+{% if freq_together %}
+<div style="margin-bottom:20px;">
+  <div style="font-weight:700;font-size:15px;margin-bottom:12px;">🔗 Frequently Bought Together</div>
+  <div class="grid4">
+    {% for p in freq_together %}
+    <a href="/product/{{ p.product_id }}" class="prod-chip" style="text-decoration:none;">
+      {% if p.image_b64 %}
+      <img src="data:{{ p.image_mime }};base64,{{ p.image_b64 }}"
+           style="width:60px;height:60px;border-radius:8px;object-fit:cover;" alt="{{ p.name }}">
+      {% else %}
+      <span style="font-size:24px;">🛒</span>
+      {% endif %}
+      <div>
+        <div style="font-size:13px;font-weight:600;line-height:1.3;">{{ p.name }}</div>
+        <div style="font-size:12px;color:var(--orange);font-weight:700;">₹{{ "%.0f"|format(p.price) }}</div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- People Also Browsed -->
+{% if also_browsed %}
+<div style="margin-bottom:20px;">
+  <div style="font-weight:700;font-size:15px;margin-bottom:12px;">👁 People Also Browsed</div>
+  <div class="grid4">
+    {% for p in also_browsed %}
+    <a href="/product/{{ p.product_id }}" class="prod-chip" style="text-decoration:none;">
+      {% if p.image_b64 %}
+      <img src="data:{{ p.image_mime }};base64,{{ p.image_b64 }}"
+           style="width:60px;height:60px;border-radius:8px;object-fit:cover;" alt="{{ p.name }}">
+      {% else %}
+      <span style="font-size:24px;">🛒</span>
+      {% endif %}
+      <div>
+        <div style="font-size:13px;font-weight:600;line-height:1.3;">{{ p.name }}</div>
+        <div style="font-size:12px;color:var(--orange);font-weight:700;">₹{{ "%.0f"|format(p.price) }}</div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<hr class="divider">
+
+<!-- Reviews Section -->
+<div id="reviews">
+  <div style="font-weight:700;font-size:18px;margin-bottom:14px;">
+    ⭐ Reviews & Ratings
+    {% if avg_rating %}
+    <span style="font-size:14px;font-weight:400;color:var(--muted);margin-left:8px;">
+      {{ avg_rating }}/5 · {{ rating_count }} review{{ 's' if rating_count != 1 }}
+    </span>
+    {% endif %}
+  </div>
+
+  {% if ai_summary %}
+  <div class="ai-summary" style="margin-bottom:18px;">
+    <div class="ai-summary-title">✨ AI-Generated Review Summary</div>
+    <p style="font-size:14px;line-height:1.7;color:var(--text);">{{ ai_summary }}</p>
+  </div>
+  {% endif %}
+
+  <!-- Write a review -->
+  {% if has_purchased %}
+    {% if not existing_review %}
+    <div class="card" style="margin-bottom:18px;border-color:var(--green);">
+      <div style="font-weight:600;font-size:15px;margin-bottom:12px;">✍️ Write a Review</div>
+      <form method="POST" action="/review/submit">
+        <input type="hidden" name="target_type" value="product">
+        <input type="hidden" name="target_id" value="{{ product.product_id }}">
+        <input type="hidden" name="redirect_to" value="/product/{{ product.product_id }}#reviews">
+        <div class="form-group">
+          <div class="form-label">Your Rating</div>
+          <div class="star-input">
+            {% for i in range(5,0,-1) %}
+            <input type="radio" name="rating" id="r{{ i }}" value="{{ i }}" {% if i==5 %}checked{% endif %}>
+            <label for="r{{ i }}">★</label>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="form-group">
+          <textarea class="form-textarea" name="body" placeholder="Describe your experience with this product…" style="min-height:90px;"></textarea>
+        </div>
+        <button class="btn btn-success" type="submit">Submit Review</button>
+      </form>
+    </div>
+    {% else %}
+    <div class="card" style="margin-bottom:18px;background:var(--gl);border-color:#B8E8D8;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:4px;">Your Review</div>
+          <span class="stars">{{ stars_html(existing_review.rating) }}</span>
+          {% if existing_review.body %}<p style="font-size:13px;margin-top:4px;">{{ existing_review.body }}</p>{% endif %}
+        </div>
+        <form method="POST" action="/review/{{ existing_review.review_id }}/delete">
+          <input type="hidden" name="redirect_to" value="/product/{{ product.product_id }}#reviews">
+          <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete your review?')">Delete</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+  {% else %}
+  <div style="background:var(--bg);border:1px dashed var(--border);border-radius:8px;padding:14px;
+              text-align:center;font-size:13px;color:var(--muted);margin-bottom:18px;">
+    Purchase and complete an order for this product to leave a review.
+  </div>
+  {% endif %}
+
+  <!-- All reviews -->
+  {% if not reviews %}
+  <div style="text-align:center;padding:28px;color:var(--muted);">
+    <div style="font-size:32px;margin-bottom:8px;">📝</div>
+    No reviews yet. Be the first!
+  </div>
+  {% endif %}
+  {% for r in reviews %}
+  <div class="review-card">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+      <div style="flex:1;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
+          <span style="font-weight:600;font-size:14px;">{{ r.reviewer_id }}</span>
+          {% if r.reviewer_id == customer_name %}<span class="badge badge-orange" style="font-size:11px;">You</span>{% endif %}
+          <span class="stars" style="font-size:14px;">{{ stars_html(r.rating) }}</span>
+          <span style="font-size:11px;color:var(--muted);">{{ r.created_at[:10] }}</span>
+        </div>
+        {% if r.body %}<p style="font-size:14px;color:#3A3530;line-height:1.6;">{{ r.body }}</p>{% endif %}
+      </div>
+      {% if r.reviewer_id == customer_name %}
+      <form method="POST" action="/review/{{ r.review_id }}/delete" style="flex-shrink:0;">
+        <input type="hidden" name="redirect_to" value="/product/{{ product.product_id }}#reviews">
+        <button type="submit" class="btn btn-sm" style="background:var(--rl);color:var(--red);border:none;"
+                onclick="return confirm('Delete your review?')">✕</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<script>
+const pid="{{ product.product_id }}"; const sid="{{ product.store_id }}";
+let currentQty = {{ cart.get(product.product_id, {}).get('qty', 0)|int }};
+function changeQty(delta){
+  const nq = Math.max(0, currentQty + delta);
+  fetch('/cart/add',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({product_id:pid, qty:nq})
+  }).then(r=>r.json()).then(d=>{
+    if(d.error){document.getElementById('cart-msg').textContent=d.error;return;}
+    currentQty = nq;
+    document.getElementById('qty-disp').textContent = nq;
+    const msg = document.getElementById('cart-msg');
+    if(nq > 0) msg.textContent = `✓ ${nq} in cart · Total ₹${d.total}`;
+    else msg.textContent = 'Removed from cart';
+  });
+}
+</script>
+{% endblock %}

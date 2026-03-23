@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Stores – Admin{% endblock %}
+{% block content %}
+<div class="admin-back">
+  <a href="/control-panel/">← Dashboard</a>
+  <span class="admin-breadcrumb">Admin › Stores</span>
+</div>
+<h1 class="page-title">All Stores</h1>
+<div class="card" style="padding:0;overflow:hidden;">
+  <table class="table">
+    <thead><tr><th>Store</th><th>Owner</th><th>Category</th><th>Orders</th><th>Approved</th><th></th></tr></thead>
+    <tbody>
+      {% for s in stores %}
+      <tr>
+        <td style="font-weight:600;">{{ s.name }}</td>
+        <td>{{ s.owner_full_name }}</td>
+        <td><span class="tag">{{ s.category }}</span></td>
+        <td>{{ s.order_count }}</td>
+        <td>{% if s.is_approved %}<span class="badge badge-green">Yes</span>{% else %}<span class="badge badge-red">No</span>{% endif %}</td>
+        <td>
+          <form method="POST" action="/control-panel/stores/{{ s.store_id }}/toggle-approved">
+            <button class="btn btn-sm btn-outline" type="submit">Toggle</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

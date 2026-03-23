@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Register Your Store – ApnaDukaan{% endblock %}
+{% block content %}
+<div style="max-width:520px; margin:32px auto;">
+  <div class="card" style="padding:36px;">
+    <div style="text-align:center; margin-bottom:28px;">
+      <div style="font-size:44px; margin-bottom:10px;">🏪</div>
+      <h1 style="font-size:22px; font-weight:700;">Register Your Store</h1>
+      <p style="font-size:14px; color:var(--muted); margin-top:4px;">
+        Create an account and list your store on ApnaDukaan
+      </p>
+    </div>
+
+    <form method="POST">
+
+      <div style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin-bottom:12px;">Your Account</div>
+
+      <div class="grid2">
+        <div class="form-group">
+          <label class="form-label">Full Name *</label>
+          <input class="form-input" name="full_name" required
+                 value="{{ form.get('full_name','') }}" placeholder="Ramesh Sharma">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone</label>
+          <input class="form-input" name="phone" type="tel"
+                 value="{{ form.get('phone','') }}" placeholder="9876543210">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Username *</label>
+          <input class="form-input" name="username" required autocomplete="username"
+                 value="{{ form.get('username','') }}" placeholder="ramesh_shop">
+          <div style="font-size:11px; color:var(--muted); margin-top:3px;">Min 3 characters, lowercase</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password *</label>
+          <input class="form-input" name="password" type="password"
+                 autocomplete="new-password" placeholder="Min 6 characters">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Confirm Password *</label>
+        <input class="form-input" name="confirm" type="password"
+               autocomplete="new-password" placeholder="Re-enter password">
+      </div>
+
+      <hr class="divider">
+      <div style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin-bottom:12px;">Your Store</div>
+
+      <div class="form-group">
+        <label class="form-label">Store Name *</label>
+        <input class="form-input" name="store_name" required
+               value="{{ form.get('store_name','') }}" placeholder="Sharma General Store">
+      </div>
+
+      <div class="grid2">
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <select class="form-select" name="category">
+            {% for cat in categories %}
+            <option value="{{ cat }}" {% if form.get('category') == cat %}selected{% endif %}>{{ cat }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Address</label>
+          <input class="form-input" name="address"
+                 value="{{ form.get('address','') }}" placeholder="12, MG Road, Kolkata">
+        </div>
+      </div>
+
+      <button class="btn btn-success" type="submit"
+              style="width:100%; justify-content:center; padding:13px; font-size:15px; margin-top:4px;">
+        Register &amp; Open My Store →
+      </button>
+    </form>
+
+    <div style="text-align:center; margin-top:16px; font-size:14px; color:var(--muted);">
+      Already have an account?
+      <a href="/owner/login" style="color:var(--orange); font-weight:600;">Log in</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

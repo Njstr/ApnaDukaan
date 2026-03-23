@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Reviews – Admin{% endblock %}
+{% block content %}
+<div class="admin-back">
+  <a href="/control-panel/">← Dashboard</a>
+  <span class="admin-breadcrumb">Admin › Reviews</span>
+</div>
+<h1 class="page-title">All Reviews</h1>
+<p class="page-subtitle">{{ reviews|length }} reviews</p>
+<div class="card" style="padding:0;overflow:hidden;">
+  <table class="table">
+    <thead><tr><th>Reviewer</th><th>Target</th><th>Rating</th><th>Body</th><th>Date</th><th></th></tr></thead>
+    <tbody>
+      {% for r in reviews %}
+      <tr>
+        <td>{{ r.reviewer_id }}<br><span class="badge badge-gray" style="font-size:10px;">{{ r.reviewer_type }}</span></td>
+        <td>{{ r.target_name or r.target_id }}<br><span class="tag">{{ r.target_type }}</span></td>
+        <td><span class="stars">{{ stars_html(r.rating) }}</span></td>
+        <td style="max-width:200px;font-size:13px;">{{ r.body[:80] }}{% if r.body|length > 80 %}…{% endif %}</td>
+        <td style="font-size:12px;color:var(--muted);">{{ r.created_at[:10] }}</td>
+        <td>
+          <form method="POST" action="/control-panel/reviews/{{ r.review_id }}/delete"
+                onsubmit="return confirm('Delete this review?')">
+            <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

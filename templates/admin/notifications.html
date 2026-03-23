@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Notifications – Admin{% endblock %}
+{% block content %}
+<div class="admin-back">
+  <a href="/control-panel/">← Dashboard</a>
+  <span class="admin-breadcrumb">Admin › Notifications</span>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+  <div>
+    <h1 class="page-title">🔔 Notifications</h1>
+    <p class="page-subtitle">
+      <span class="badge badge-red" style="margin-right:6px;">{{ unread_c }} customer unread</span>
+      <span class="badge badge-blue">{{ unread_o }} owner unread</span>
+    </p>
+  </div>
+</div>
+
+<!-- Send custom notification -->
+<div class="card" style="margin-bottom:20px;border-color:var(--orange);">
+  <div style="font-weight:700;font-size:15px;margin-bottom:14px;">📢 Send Notification</div>
+  <form method="POST" action="/admin/send-notification">
+    <div class="grid2" style="gap:12px;margin-bottom:12px;">
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label">Recipient Type</label>
+        <select class="form-select" name="recipient_type">
+          <option value="customer">Customer</option>
+          <option value="owner">Store Owner (use store_id)</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label">Recipient ID</label>
+        <input class="form-input" name="recipient_id" placeholder="customer name or store_id" required>
+      </div>
+    </div>
+    <div class="grid2" style="gap:12px;margin-bottom:12px;">
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label">Icon (emoji)</label>
+        <input class="form-input" name="icon" value="📢" maxlength="8">
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label">Title</label>
+        <input class="form-input" name="title" placeholder="e.g. Special Offer!" required>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label class="form-label">Message Body</label>
+      <textarea class="form-textarea" name="body" style="min-height:70px;" placeholder="Write your message…"></textarea>
+    </div>
+    <button class="btn btn-primary" type="submit">Send Notification</button>
+  </form>
+</div>
+
+<!-- Recent notifications log -->
+<div class="card" style="padding:0;overflow:hidden;">
+  <div style="padding:12px 18px;font-weight:700;border-bottom:1px solid var(--border);
+              display:flex;align-items:center;justify-content:space-between;">
+    <span>Recent Notifications (last 100)</span>
+    <span class="badge badge-gray">{{ notifications|length }}</span>
+  </div>
+  {% if not notifications %}
+  <div style="padding:32px;text-align:center;color:var(--muted);">No notifications yet.</div>
+  {% else %}
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Icon</th><th>Recipient</th><th>Title</th><th>Body</th><th>Read</th><th>Sent</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for n in notifications %}
+      <tr style="{% if not n.is_read %}background:var(--bl);{% endif %}">
+        <td style="font-size:20px;">{{ n.icon }}</td>
+        <td>
+          <span class="badge {% if n.recipient_type=='customer' %}badge-green{% else %}badge-blue{% endif %}">
+            {{ n.recipient_type }}
+          </span><br>
+          <span style="font-size:12px;font-weight:600;">{{ n.recipient_id }}</span>
+        </td>
+        <td style="font-weight:600;">{{ n.title }}</td>
+        <td style="font-size:13px;color:var(--muted);max-width:220px;">{{ n.body[:80] }}{% if n.body|length>80 %}…{% endif %}</td>
+        <td>{% if n.is_read %}<span class="badge badge-green">✓</span>{% else %}<span class="badge badge-red">●</span>{% endif %}</td>
+        <td style="font-size:12px;color:var(--muted);white-space:nowrap;">{{ n.created_at[:16] }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

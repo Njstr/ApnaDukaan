@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Checkout – ApnaDukaan{% endblock %}
+{% block content %}
+<h1 class="page-title">Checkout</h1>
+<p class="page-subtitle">{{ store.name }}</p>
+
+<div class="grid2" style="gap:24px;align-items:start;">
+  <!-- Order Summary -->
+  <div>
+    <div class="card" style="margin-bottom:16px;">
+      <div style="font-weight:700;margin-bottom:14px;">🛒 Your Order</div>
+      {% for pid, item in cart.items() %}
+      <div style="display:flex;justify-content:space-between;align-items:center;
+                  padding:10px 0;border-bottom:1px solid var(--border);">
+        <div>
+          <div style="font-weight:600;">{{ item.name }}</div>
+          <div style="font-size:13px;color:var(--muted);">{{ item.qty }} × ₹{{ "%.0f"|format(item.price) }} / {{ item.unit }}</div>
+        </div>
+        <div style="font-weight:700;">₹{{ "%.0f"|format(item.price * item.qty) }}</div>
+      </div>
+      {% endfor %}
+      <div style="display:flex;justify-content:space-between;padding-top:14px;
+                  font-size:18px;font-weight:700;">
+        <span>Total</span>
+        <span style="color:var(--orange);">₹{{ total }}</span>
+      </div>
+    </div>
+
+    <div class="card card-sm" style="background:var(--gl);border-color:#B8E8D8;">
+      <div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:2px;">Your Trust Points</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="points-pill">⭐ {{ cust_points }} pts</div>
+        <span>{{ cust_icon }} {{ cust_tier }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pick Date & Slot -->
+  <div>
+    <form method="POST" action="/order/place">
+      <input type="hidden" name="store_id" value="{{ store.store_id }}">
+
+      <div class="card" style="margin-bottom:16px;">
+        <div style="font-weight:700;margin-bottom:14px;">📅 Pickup Date</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;" id="date-grid">
+          {% for iso, label in pickup_dates %}
+          <label style="cursor:pointer;">
+            <input type="radio" name="pickup_date" value="{{ iso }}"
+                   {% if loop.first %}checked{% endif %} style="display:none;"
+                   onchange="selectDate(this)">
+            <div class="date-btn {% if loop.first %}date-selected{% endif %}"
+                 style="text-align:center;padding:10px 6px;border:1.5px solid var(--border);
+                        border-radius:8px;font-size:13px;transition:all .15s;"
+                 id="date-{{ iso }}"
+                 onclick="document.querySelectorAll('.date-btn').forEach(d=>d.classList.remove('date-selected','date-sel-style'));this.classList.add('date-selected','date-sel-style');this.previousElementSibling.checked=true;">
+              <div style="font-size:11px;color:var(--muted);">{{ label.split(',')[0] }}</div>
+              <div style="font-weight:700;font-size:15px;">{{ label.split(' ')[1] }}</div>
+              <div style="font-size:11px;color:var(--muted);">{{ label.split(' ')[2] }}</div>
+            </div>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px;">
+        <div style="font-weight:700;margin-bottom:14px;">⏰ Pickup Time Slot</div>
+        {% if not slots %}
+        <p style="color:var(--muted);font-size:13px;">No time slots available.</p>
+        {% else %}
+        <div style="display:grid;gap:8px;">
+          {% for slot in slots %}
+          <label style="cursor:pointer;display:flex;align-items:center;gap:10px;
+                        padding:12px;border:1.5px solid var(--border);border-radius:8px;
+                        transition:border-color .15s;"
+                 onmouseover="this.style.borderColor='var(--orange)'"
+                 onmouseout="this.style.borderColor=this.querySelector('input').checked?'var(--orange)':'var(--border)'">
+            <input type="radio" name="slot_id" value="{{ slot.slot_id }}" required
+                   {% if loop.first %}checked{% endif %}
+                   onchange="document.querySelectorAll('label input[name=slot_id]').forEach(i=>{i.parentElement.style.borderColor=i.checked?'var(--orange)':'var(--border)';i.parentElement.style.background=i.checked?'var(--ol)':'var(--card)'});"
+                   style="accent-color:var(--orange);">
+            <div>
+              <div style="font-weight:600;">{{ slot.label }}</div>
+              <div style="font-size:12px;color:var(--muted);">Max {{ slot.max_orders }} orders per slot</div>
+            </div>
+          </label>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="card card-sm" style="margin-bottom:16px;background:var(--yl);border-color:#FEF08A;">
+        <div style="font-size:13px;font-weight:600;color:var(--yellow);margin-bottom:4px;">📌 How it works</div>
+        <div style="font-size:13px;color:#78350F;line-height:1.6;">
+          1. Place order → <strong>+2 points</strong><br>
+          2. Visit store on chosen date in your time slot<br>
+          3. Scan store QR → <strong>+5 points</strong> if on time<br>
+          4. Confirm receipt → <strong>+10 points</strong>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" type="submit" style="width:100%;padding:14px;font-size:16px;">
+        ✓ Place Order · ₹{{ total }}
+      </button>
+    </form>
+  </div>
+</div>
+
+<style>
+.date-sel-style{border-color:var(--orange)!important;background:var(--ol)!important;}
+</style>
+<script>
+// Highlight first slot
+document.querySelectorAll('label input[name=slot_id]').forEach(i=>{
+  if(i.checked){i.parentElement.style.borderColor='var(--orange)';i.parentElement.style.background='var(--ol)';}
+});
+</script>
+{% endblock %}

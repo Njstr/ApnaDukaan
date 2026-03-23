@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if product else 'Add' }} Product – {{ store.name }}{% endblock %}
+{% block head %}
+<style>
+.img-preview{width:100%;max-height:220px;object-fit:cover;border-radius:10px;margin-top:10px;}
+.img-drop{border:2px dashed var(--border);border-radius:10px;padding:28px;text-align:center;
+  cursor:pointer;transition:border-color .15s;background:var(--bg);}
+.img-drop:hover{border-color:var(--orange);}
+.spec-row{display:grid;grid-template-columns:1fr 2fr;gap:10px;align-items:center;}
+</style>
+{% endblock %}
+{% block content %}
+<div style="margin-bottom:14px;">
+  <a href="/owner/products" style="font-size:13px;color:var(--muted);">← Product List</a>
+</div>
+<h1 class="page-title">{{ 'Edit Product' if product else 'Add New Product' }}</h1>
+<p class="page-subtitle">{{ store.name }}</p>
+
+<form method="POST" enctype="multipart/form-data">
+  <div class="grid2" style="gap:24px;align-items:start;">
+    <!-- LEFT column -->
+    <div>
+      <div class="card" style="margin-bottom:16px;">
+        <div style="font-weight:700;margin-bottom:14px;">Basic Info</div>
+        <div class="form-group">
+          <label class="form-label">Product Name *</label>
+          <input class="form-input" name="name" required value="{{ product.name if product else '' }}" placeholder="e.g. Basmati Rice">
+        </div>
+        <div class="grid2">
+          <div class="form-group">
+            <label class="form-label">Price (₹) *</label>
+            <input class="form-input" name="price" type="number" step="0.01" min="0" required
+                   value="{{ '%.2f'|format(product.price) if product else '' }}" placeholder="0.00">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Unit</label>
+            <select class="form-select" name="unit">
+              {% for u in units %}
+              <option value="{{ u }}" {% if product and product.unit==u %}selected{% endif %}>{{ u }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <select class="form-select" name="category">
+            {% for c in categories %}
+            <option value="{{ c }}" {% if product and product.category==c %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea class="form-textarea" name="description" style="min-height:100px;"
+                    placeholder="Describe the product — quality, uses, origin, etc.">{{ product.description if product else '' }}</textarea>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px;">
+        <div style="font-weight:700;margin-bottom:14px;">📷 Product Image</div>
+        <div class="img-drop" onclick="document.getElementById('img-inp').click()">
+          <div style="font-size:28px;margin-bottom:8px;">🖼</div>
+          <div style="font-size:13px;font-weight:600;">Click to upload image</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">JPEG · PNG · WebP · max 2 MB</div>
+        </div>
+        <input type="file" id="img-inp" name="image" accept="image/*" style="display:none" onchange="previewImg(this)">
+        {% if product and product.image_b64 %}
+        <img src="data:{{ product.image_mime }};base64,{{ product.image_b64 }}" class="img-preview" id="img-preview">
+        <div style="font-size:12px;color:var(--muted);margin-top:4px;">Current image — upload a new one to replace it.</div>
+        {% else %}
+        <img id="img-preview" class="img-preview" style="display:none;">
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- RIGHT column -->
+    <div>
+      <div class="card" style="margin-bottom:16px;">
+        <div style="font-weight:700;margin-bottom:14px;">🏷 Product Specs</div>
+        <div class="form-group">
+          <label class="form-label">Brand</label>
+          <input class="form-input" name="brand" value="{{ product.brand if product else '' }}" placeholder="e.g. Aashirvaad">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Model / SKU</label>
+          <input class="form-input" name="model" value="{{ product.model if product else '' }}" placeholder="e.g. Premium Grade A">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Country of Origin</label>
+          <input class="form-input" name="origin" value="{{ product.origin if product else '' }}" placeholder="e.g. India">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Dimensions</label>
+          <input class="form-input" name="dimensions" value="{{ product.dimensions if product else '' }}" placeholder="e.g. 30×20×10 cm">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Weight / Pack Size</label>
+          <input class="form-input" name="weight" value="{{ product.weight if product else '' }}" placeholder="e.g. 1 kg pack">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Material / Composition</label>
+          <input class="form-input" name="material" value="{{ product.material if product else '' }}" placeholder="e.g. 100% whole wheat">
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px;">
+        <div style="font-weight:700;margin-bottom:4px;">➕ Extra Specs</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Up to 3 custom key–value rows shown in the specs table.</div>
+        {% for n in range(1,4) %}
+        <div class="spec-row" style="margin-bottom:10px;">
+          <input class="form-input" name="spec{{ n }}_key" placeholder="Spec name"
+                 value="{{ product['spec'~n~'_key'] if product else '' }}">
+          <input class="form-input" name="spec{{ n }}_val" placeholder="Value"
+                 value="{{ product['spec'~n~'_val'] if product else '' }}">
+        </div>
+        {% endfor %}
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
+        <a href="/owner/products" class="btn btn-outline">Cancel</a>
+        <button class="btn btn-primary" type="submit">
+          {{ '💾 Save Changes' if product else '➕ Add Product' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</form>
+
+<script>
+function previewImg(inp){
+  const file=inp.files[0]; if(!file) return;
+  if(file.size > 2*1024*1024){alert('Image must be under 2 MB.');inp.value='';return;}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const el=document.getElementById('img-preview');
+    el.src=e.target.result; el.style.display='block';
+  };
+  reader.readAsDataURL(file);
+}
+</script>
+{% endblock %}

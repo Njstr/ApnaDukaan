@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Order {{ order.order_id }} – ApnaDukaan{% endblock %}
+{% block content %}
+<div style="margin-bottom:14px;"><a href="/owner/orders" style="font-size:13px;color:var(--muted);">← Orders</a></div>
+<h1 class="page-title">{{ order.order_id }}</h1>
+<p class="page-subtitle">{{ order.store_name }}</p>
+<div class="grid2" style="gap:20px;align-items:start;">
+  <div>
+    <div class="card" style="margin-bottom:16px;">
+      <div style="font-weight:700;margin-bottom:14px;">Order Info</div>
+      <table class="spec-table">
+        <tr><td>Customer</td><td><strong>{{ order.customer_name }}</strong></td></tr>
+        <tr><td>Pickup Date</td><td>{{ order.pickup_date if order.pickup_date else '—' }}</td></tr>
+        <tr><td>Time Slot</td><td>{{ order.slot_label }}</td></tr>
+        <tr><td>Status</td><td><span class="badge status-{{ order.status }}">{{ order.status|title }}</span></td></tr>
+        <tr><td>Total</td><td><strong style="color:var(--orange);">₹{{ "%.2f"|format(order.total_amount) }}</strong></td></tr>
+        <tr><td>Placed</td><td style="color:var(--muted);">{{ order.placed_at[:16] }}</td></tr>
+        <tr><td>Customer Confirmed</td><td>{% if order.customer_confirmed %}✅ Yes{% else %}⏳ No{% endif %}</td></tr>
+        <tr><td>Store Confirmed</td><td>{% if order.store_confirmed %}✅ Yes{% else %}⏳ No{% endif %}</td></tr>
+        <tr><td>Visit Verified</td><td>{% if order.visit_verified %}✅ Yes{% else %}⏳ No{% endif %}</td></tr>
+      </table>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      {% if order.status in ('placed','preparing') %}
+      <form method="POST" action="/owner/order/{{ order.order_id }}/ready">
+        <button class="btn btn-success" type="submit">✓ Mark Ready</button>
+      </form>
+      {% endif %}
+      {% if order.status == 'visited' and not order.store_confirmed %}
+      <form method="POST" action="/owner/order/{{ order.order_id }}/confirm">
+        <button class="btn btn-primary" type="submit">Confirm Handover</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  <div>
+    <div class="card" style="margin-bottom:16px;">
+      <div style="font-weight:700;margin-bottom:14px;">Items</div>
+      {% for item in items %}
+      <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
+        <div>
+          <div style="font-weight:600;">{{ item.product_name }}</div>
+          <div style="font-size:13px;color:var(--muted);">{{ item.quantity }} × ₹{{ "%.2f"|format(item.unit_price) }}</div>
+        </div>
+        <div style="font-weight:700;">₹{{ "%.2f"|format(item.subtotal) }}</div>
+      </div>
+      {% endfor %}
+      <div style="display:flex;justify-content:space-between;padding-top:12px;font-weight:700;font-size:16px;">
+        <span>Total</span><span style="color:var(--orange);">₹{{ "%.2f"|format(order.total_amount) }}</span>
+      </div>
+    </div>
+    {% if order.status == 'completed' %}
+    <div class="card" style="border-color:{% if existing_rating %}var(--green){% else %}var(--border){% endif %};">
+      {% if existing_rating %}
+      <div style="font-weight:700;margin-bottom:8px;color:var(--green);">✅ Customer Rated</div>
+      <span class="stars" style="font-size:18px;">{{ stars_html(existing_rating.rating) }}</span>
+      {% if existing_rating.body %}<p style="font-size:13px;color:var(--muted);margin-top:8px;">{{ existing_rating.body }}</p>{% endif %}
+      {% else %}
+      <div style="font-weight:700;margin-bottom:14px;">⭐ Rate This Customer</div>
+      <form method="POST" action="/owner/rate-customer">
+        <input type="hidden" name="order_id" value="{{ order.order_id }}">
+        <input type="hidden" name="customer_name" value="{{ order.customer_name }}">
+        <div class="form-group">
+          <div style="display:flex;gap:10px;font-size:28px;" id="star-row">
+            {% for i in range(1,6) %}
+            <span style="cursor:pointer;color:#D1D5DB;transition:color .1s;" onclick="setRating({{ i }})">★</span>
+            {% endfor %}
+          </div>
+          <input type="hidden" name="rating" id="rating-val" value="5">
+        </div>
+        <div class="form-group">
+          <textarea class="form-textarea" name="body" style="min-height:70px;" placeholder="e.g. On time, courteous…"></textarea>
+        </div>
+        <button class="btn btn-primary" type="submit">Submit Rating</button>
+      </form>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+<script>
+function setRating(n){
+  document.getElementById('rating-val').value=n;
+  document.querySelectorAll('#star-row span').forEach((s,i)=>{s.style.color=i<n?'#F59E0B':'#D1D5DB';});
+}
+setRating(5);
+</script>
+{% endblock %}

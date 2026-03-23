@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Orders – Admin{% endblock %}
+{% block content %}
+<div class="admin-back">
+  <a href="/control-panel/">← Dashboard</a>
+  <span class="admin-breadcrumb">Admin › Orders</span>
+</div>
+<h1 class="page-title">Orders</h1>
+<div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">
+  {% for s in ['','placed','preparing','ready','visited','completed','no_show','failed'] %}
+  <a href="?status={{ s }}" class="btn btn-sm {% if status_filter==s %}btn-primary{% else %}btn-outline{% endif %}">{{ s or 'All' }}</a>
+  {% endfor %}
+</div>
+<div class="card" style="padding:0;overflow:hidden;">
+  <table class="table">
+    <thead><tr><th>Order</th><th>Store</th><th>Customer</th><th>Date</th><th>Status</th><th>Total</th></tr></thead>
+    <tbody>
+      {% for o in orders %}
+      <tr>
+        <td style="font-family:monospace;font-size:13px;">{{ o.order_id }}</td>
+        <td>{{ o.store_name }}</td>
+        <td>{{ o.customer_name }}</td>
+        <td style="font-size:12px;color:var(--muted);">{{ o.placed_at[:10] }}</td>
+        <td><span class="badge status-{{ o.status }}">{{ o.status }}</span></td>
+        <td style="font-weight:600;">₹{{ "%.0f"|format(o.total_amount) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

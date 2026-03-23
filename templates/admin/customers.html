@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Customers – Admin{% endblock %}
+{% block content %}
+<div class="admin-back">
+  <a href="/control-panel/">← Dashboard</a>
+  <span class="admin-breadcrumb">Admin › Customers</span>
+</div>
+<h1 class="page-title">Customers</h1>
+<div class="card" style="padding:0;overflow:hidden;">
+  <table class="table">
+    <thead><tr><th>Name</th><th>Points</th><th>Orders</th><th>Avg Rating</th><th>Last Order</th></tr></thead>
+    <tbody>
+      {% for c in customers %}
+      <tr>
+        <td style="font-weight:600;">{{ c.customer_name }}</td>
+        <td><span class="points-pill" style="font-size:12px;">⭐ {{ c.total_points }}</span></td>
+        <td>{{ c.order_count or 0 }}</td>
+        <td>{% if c.avg_rating %}<span class="stars" style="font-size:13px;">{{ stars_html(c.avg_rating|float) }}</span> {{ "%.1f"|format(c.avg_rating) }}{% else %}—{% endif %}</td>
+        <td style="font-size:12px;color:var(--muted);">{{ (c.last_order or '')[:10] }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

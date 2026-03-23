@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Analytics – {{ store.name }}{% endblock %}
+{% block content %}
+<h1 class="page-title">Analytics</h1>
+<p class="page-subtitle">{{ store.name }}</p>
+
+<div class="grid4" style="margin-bottom:24px;">
+  {% for label, val, color in [
+    ('Total Orders', analytics.total_orders if analytics else 0, 'var(--text)'),
+    ('Completed', analytics.completed_orders if analytics else 0, 'var(--green)'),
+    ('Revenue', '₹'~("%.0f"|format(analytics.total_revenue if analytics else 0)), 'var(--green)'),
+    ('No-Shows', analytics.no_shows if analytics else 0, 'var(--red)'),
+  ] %}
+  <div class="stat-card">
+    <div class="stat-num" style="color:{{ color }};">{{ val }}</div>
+    <div class="stat-label">{{ label }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if avg_rating %}
+<div class="card" style="margin-bottom:20px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+  <div style="text-align:center;">
+    <div style="font-size:48px;font-weight:700;color:var(--orange);">{{ avg_rating }}</div>
+    <div class="stars" style="font-size:20px;">{{ stars_html(avg_rating) }}</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:4px;">{{ rating_count }} review{{ 's' if rating_count != 1 }}</div>
+  </div>
+  {% if ai_summary %}
+  <div class="ai-summary" style="flex:1;">
+    <div class="ai-summary-title">✨ AI Review Summary</div>
+    <p style="font-size:14px;line-height:1.65;">{{ ai_summary }}</p>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if reviews %}
+<div class="card" style="margin-bottom:20px;">
+  <div style="font-weight:700;margin-bottom:14px;">⭐ Recent Customer Reviews</div>
+  {% for r in reviews %}
+  <div class="review-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:4px;">
+      <span style="font-weight:600;font-size:14px;">{{ r.reviewer_id }}</span>
+      <span class="stars" style="font-size:13px;">{{ stars_html(r.rating) }}</span>
+    </div>
+    {% if r.body %}<p style="font-size:13px;color:var(--muted);">{{ r.body }}</p>{% endif %}
+    <div style="font-size:11px;color:var(--muted);margin-top:4px;">{{ r.created_at[:10] }}</div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if peak_slots %}
+<div class="card" style="margin-bottom:20px;">
+  <div style="font-weight:700;margin-bottom:12px;">📊 Peak Time Slots</div>
+  {% for slot, count in peak_slots.items() %}
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+    <span style="font-size:13px;min-width:180px;">{{ slot }}</span>
+    <div style="flex:1;background:var(--bg);border-radius:4px;height:8px;overflow:hidden;">
+      <div style="height:100%;background:var(--orange);border-radius:4px;width:{{ [count*20,100]|min }}%;"></div>
+    </div>
+    <span style="font-size:13px;font-weight:600;color:var(--orange);">{{ count }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="card" style="margin-bottom:20px;">
+  <div style="font-weight:700;margin-bottom:14px;">🕐 Recent Orders</div>
+  <table class="table">
+    <thead><tr><th>Order</th><th>Customer</th><th>Date</th><th>Status</th><th>Amount</th></tr></thead>
+    <tbody>
+      {% for o in recent_orders %}
+      <tr>
+        <td style="font-family:monospace;font-size:13px;">{{ o.order_id }}</td>
+        <td>{{ o.customer_name }}</td>
+        <td style="font-size:12px;color:var(--muted);">{{ o.pickup_date if o.pickup_date else o.placed_at[:10] }}</td>
+        <td><span class="badge status-{{ o.status }}">{{ o.status|title }}</span></td>
+        <td style="font-weight:600;">₹{{ "%.0f"|format(o.total_amount) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <div style="font-weight:700;margin-bottom:14px;">💰 Points Transactions</div>
+  <table class="table">
+    <thead><tr><th>Event</th><th>Points</th><th>Date</th></tr></thead>
+    <tbody>
+      {% for t in transactions %}
+      <tr>
+        <td>{{ t.event_type.replace('_',' ')|title }}</td>
+        <td style="font-weight:700;color:{% if t.delta>0 %}var(--green){% else %}var(--red){% endif %};">
+          {{ '+' if t.delta>0 else '' }}{{ t.delta }}</td>
+        <td style="color:var(--muted);font-size:12px;">{{ t.created_at[:16] }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

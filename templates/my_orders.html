@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}My Orders – ApnaDukaan{% endblock %}
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+  <div>
+    <h1 class="page-title">My Orders</h1>
+    <p class="page-subtitle">{{ customer_name }}</p>
+  </div>
+  <div style="display:flex; align-items:center; gap:12px;">
+    <div class="points-pill">{{ icon }} {{ cust_points }} pts · {{ tier }}</div>
+    <a href="/scan" class="btn btn-primary btn-sm">📷 Scan QR</a>
+  </div>
+</div>
+
+{% if not orders %}
+<div class="card" style="text-align:center; padding:48px;">
+  <div style="font-size:40px; margin-bottom:10px;">📦</div>
+  <div style="font-weight:600; margin-bottom:4px;">No orders yet</div>
+  <div style="font-size:14px; color:var(--muted); margin-bottom:16px;">Browse stores and place your first order!</div>
+  <a href="/stores" class="btn btn-primary">Browse Stores</a>
+</div>
+{% else %}
+<div style="display:flex; flex-direction:column; gap:12px;">
+{% for o in orders %}
+<div class="card" style="{% if o.status == 'completed' %}border-left:3px solid var(--green);{% elif o.status == 'no_show' %}border-left:3px solid var(--red);{% else %}border-left:3px solid var(--orange);{% endif %}">
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
+    <div>
+      <div style="font-weight:700; font-size:15px; margin-bottom:2px;">{{ o.order_id }}</div>
+      <div style="font-size:13px; color:var(--muted);">{{ o.store_name }} · {{ o.slot_label }}{% if o.pickup_date %} · 📅 {{ o.pickup_date }}{% endif %}</div>
+    </div>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span class="badge status-{{ o.status }}">{{ o.status|replace('_',' ')|title }}</span>
+      <span style="font-weight:700;">₹{{ "%.0f"|format(o.total_amount) }}</span>
+    </div>
+  </div>
+
+  <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
+    {% if o.status in ('placed','preparing','ready') %}
+      <a href="/scan" class="btn btn-primary btn-sm">📷 Scan QR to Check In</a>
+    {% endif %}
+    {% if o.status == 'visited' and not o.customer_confirmed %}
+      <a href="/confirm-receipt/{{ o.order_id }}" class="btn btn-success btn-sm">✓ Confirm Receipt</a>
+    {% endif %}
+    {% if o.status == 'completed' %}
+      <span class="badge badge-green">✅ Completed · {{ o.completed_at[:10] if o.completed_at else '' }}</span>
+    {% endif %}
+  </div>
+  <div style="font-size:12px; color:var(--muted); margin-top:8px;">Placed: {{ o.placed_at[:16] }}</div>
+</div>
+{% endfor %}
+</div>
+{% endif %}
+{% endblock %}
