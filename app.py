@@ -31,7 +31,7 @@ def create_app(env=None):
     _register_routes(app)
     with app.app_context():
         init_db(app.config["DB_PATH"])
-        seed_demo_data(app.config["DB_PATH"])
+        # seed_demo_data(app.config["DB_PATH"])
     return app
 
 # ── LOGGING ───────────────────────────────────────────────────────────────────
