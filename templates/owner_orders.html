@@ -12,13 +12,15 @@
       <input type="date" name="date" value="{{ filter_date }}" class="form-input" style="width:160px;">
       <button class="btn btn-outline btn-sm" type="submit">Filter</button>
     </form>
-    <a href="?date={{ today_iso if today_iso else '' }}" class="btn btn-outline btn-sm">Today</a>
+    <a href="/owner/orders" class="btn btn-primary btn-sm">All Orders</a>
+    <a href="?date={{ today_date }}" class="btn btn-outline btn-sm">Today</a>
   </div>
 </div>
 
 {% if order_dates %}
 <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">
   📆 Dates with orders:
+  <a href="/owner/orders" style="margin:0 4px;font-weight:700;color:{% if not filter_date %}var(--orange){% else %}var(--muted){% endif %};">All</a>
   {% for d in order_dates[:8] %}
   <a href="?date={{ d }}" style="margin:0 4px;font-weight:600;color:{% if d==filter_date %}var(--orange){% else %}var(--blue){% endif %};">{{ d[5:] }}</a>
   {% endfor %}
@@ -28,7 +30,7 @@
 {% if not slots_map %}
 <div class="card" style="text-align:center;padding:48px;">
   <div style="font-size:40px;margin-bottom:10px;">📭</div>
-  <div style="font-weight:600;font-size:16px;">No orders for {{ filter_date }}</div>
+  <div style="font-weight:600;font-size:16px;">{% if filter_date %}No orders for {{ filter_date }}{% else %}No orders yet{% endif %}</div>
   <p style="color:var(--muted);font-size:13px;margin-top:6px;">Try a different date.</p>
 </div>
 {% endif %}

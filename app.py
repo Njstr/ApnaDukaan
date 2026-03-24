@@ -855,7 +855,20 @@ def _register_routes(app):
             conn.execute("INSERT INTO order_items(item_id,order_id,product_id,product_name,quantity,unit_price,subtotal) VALUES(?,?,?,?,?,?,?)",
                          (str(uuid.uuid4()),oid,pid,item["name"],item["qty"],item["price"],round(item["price"]*item["qty"],2)))
         conn.execute("INSERT OR IGNORE INTO points(entity_id,entity_type,total_points) VALUES(?,?,0)",(cname,"customer"))
-        conn.commit(); award_points(cname,"customer","order_placed",oid); update_analytics(store_id)
+        # conn.commit();# 🔔 Notify store owner about new order
+        conn.commit()
+        award_points(cname,"customer","order_placed",oid)
+        update_analytics(store_id)
+        store_row = conn.execute("SELECT name,owner_id FROM stores WHERE store_id=?",(store_id,)).fetchone()
+        item_count = sum(int(v["qty"]) for v in sc.values())
+        push_notification(
+            "owner", store_id,
+            f"New Order: {oid}",
+            f"{cname} ordered {item_count} item{'s' if item_count!=1 else ''} for {pickup_date} · ₹{round(total,2)}",
+            "🆕",
+            f"/owner/orders?date={pickup_date}"
+        ) 
+        award_points(cname,"customer","order_placed",oid); update_analytics(store_id)
         session["cart"]={k:v for k,v in cart.items() if v["store_id"]!=store_id}
         flash(f"Order {oid} placed for {pickup_date}! +2 points.","success")
         return redirect(url_for("order_confirmation",order_id=oid))
@@ -1045,10 +1058,14 @@ def _register_routes(app):
         sid=session["store_id"]; conn=get_db()
         store=conn.execute("SELECT * FROM stores WHERE store_id=?",(sid,)).fetchone()
         analytics=conn.execute("SELECT * FROM store_analytics WHERE store_id=?",(sid,)).fetchone()
+        pending=conn.execute("""SELECT o.*,ts.label AS slot_label
+            FROM orders o JOIN time_slots ts ON o.slot_id=ts.slot_id
+            WHERE o.store_id=? AND o.status IN('placed','preparing')
+            ORDER BY o.pickup_date, ts.start_time""", (sid,)).fetchall()
         today_orders=conn.execute("""SELECT o.*,ts.label AS slot_label
             FROM orders o JOIN time_slots ts ON o.slot_id=ts.slot_id
-            WHERE o.store_id=? AND o.pickup_date=date('now') ORDER BY ts.start_time""",(sid,)).fetchall()
-        pending=[o for o in today_orders if o["status"] in("placed","preparing")]
+            WHERE o.store_id=? AND o.pickup_date=date('now')
+            ORDER BY ts.start_time""", (sid,)).fetchall()
         ready=[o for o in today_orders if o["status"]=="ready"]
         visited=[o for o in today_orders if o["status"]=="visited"]
         completed=[o for o in today_orders if o["status"]=="completed"]
@@ -1198,13 +1215,23 @@ def _register_routes(app):
     def owner_orders():
         sid=session["store_id"]; conn=get_db()
         store=conn.execute("SELECT * FROM stores WHERE store_id=?",(sid,)).fetchone()
-        filter_date=request.args.get("date",date.today().isoformat())
-        orders=conn.execute("""SELECT o.*,ts.label AS slot_label,ts.start_time,ts.end_time
-            FROM orders o JOIN time_slots ts ON o.slot_id=ts.slot_id
-            WHERE o.store_id=? AND o.pickup_date=? ORDER BY ts.start_time,o.placed_at DESC""",
-            (sid,filter_date)).fetchall()
+        # Optional date filter; if none, show ALL orders grouped by date then slot
+        filter_date=request.args.get("date","")
+        if filter_date:
+            orders=conn.execute("""SELECT o.*,ts.label AS slot_label,ts.start_time,ts.end_time
+                FROM orders o JOIN time_slots ts ON o.slot_id=ts.slot_id
+                WHERE o.store_id=? AND o.pickup_date=?
+                ORDER BY ts.start_time,o.placed_at DESC""", (sid,filter_date)).fetchall()
+        else:
+            orders=conn.execute("""SELECT o.*,ts.label AS slot_label,ts.start_time,ts.end_time
+                FROM orders o JOIN time_slots ts ON o.slot_id=ts.slot_id
+                WHERE o.store_id=?
+                ORDER BY o.pickup_date DESC, ts.start_time, o.placed_at DESC""", (sid,)).fetchall()
+        # Group: when showing all, key = "DATE · SLOT"; when filtered, key = slot only
         slots_map={}
-        for o in orders: slots_map.setdefault(o["slot_label"],[]).append(o)
+        for o in orders:
+            key = (f"{o['pickup_date']} · " if not filter_date else "") + o["slot_label"]
+            slots_map.setdefault(key,[]).append(o)
         order_dates=[r[0] for r in conn.execute(
             "SELECT DISTINCT pickup_date FROM orders WHERE store_id=? ORDER BY pickup_date DESC LIMIT 30",(sid,)).fetchall()]
         cust_ratings={r["target_id"]:r["rating"] for r in conn.execute(
@@ -1355,7 +1382,7 @@ def _register_routes(app):
         status=request.args.get("status","")
         orders=get_db().execute(
             f"SELECT o.*,s.name AS store_name FROM orders o JOIN stores s ON o.store_id=s.store_id "
-            f"WHERE 1=1{'AND o.status=?' if status else''} ORDER BY o.placed_at DESC LIMIT 100",
+            f"WHERE 1=1{' AND o.status=?' if status else''} ORDER BY o.placed_at DESC LIMIT 100",
             (status,) if status else()).fetchall()
         return render_template("admin/orders.html",orders=orders,status_filter=status)
     @app.route(f"{ADMIN_PREFIX}/customers")
