@@ -16,6 +16,45 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
 a{color:inherit;text-decoration:none;}
 .nav{background:var(--card);border-bottom:1px solid var(--border);padding:0 20px;
   display:flex;align-items:center;justify-content:space-between;height:58px;position:sticky;top:0;z-index:100;}
+/* Hamburger hidden on desktop */
+.hamburger{
+  display:none;
+  font-size:22px;
+  cursor:pointer;
+}
+@media(min-width:769px){
+  .nav-actions a span {
+    display: none;
+  }
+
+  .nav-highlight span {
+    display: inline; /* only this one shows text */
+  }
+}
+/* Search container */
+.nav-search {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+/* Input */
+.nav-search-input {
+  width: 100%;
+  max-width: 320px;
+  padding: 8px 14px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s;
+}
+
+/* Focus effect */
+.nav-search-input:focus {
+  border-color: var(--orange);
+  box-shadow: 0 0 0 2px var(--ol);
+}
 .nav-brand{font-size:20px;font-weight:700;color:var(--orange);}
 .nav-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .nav-user{font-size:13px;color:var(--muted);}
@@ -108,7 +147,64 @@ a{color:inherit;text-decoration:none;}
   background:var(--card);border:1px solid var(--border);border-radius:8px;}
 .admin-back a{font-size:13px;color:var(--blue);font-weight:600;}
 .admin-back a:hover{text-decoration:underline;}
-.admin-breadcrumb{font-size:12px;color:var(--muted);}
+.admin-breadcrumb{font-size:12px;color:var(--muted);} 
+.nav-menu{display: flex;align-items: center;gap: 8px}
+/* 🔥 Mobile */
+@media(max-width:768px){
+
+  .hamburger{
+    display:block;
+  }
+
+  #nav-menu{
+    display:none;
+    position:absolute;
+    top:60px;
+    right:20px;
+    flex-direction:column;
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:12px;
+    min-width:180px;
+    box-shadow:var(--sh);
+  }
+
+  #nav-menu.show{
+    display:flex;
+  }
+
+  #nav-menu a,
+  #nav-menu span{
+    padding: 10px 12px;
+    width:100%;
+  }
+  .nav-item span {
+    display: inline;
+  }
+
+  .nav-highlight {
+    border-radius:10px;
+    border:1.5px solid var(--border);
+    font-weight: 600;
+    font-size: 13px;
+  }
+
+  .nav-search {
+    display: none; /* hide in navbar */
+  }
+
+  /* Show inside dropdown instead */
+  #nav-menu .nav-search {
+    display: block;
+    width: 100%;
+    margin-bottom: 10px;
+  }
+
+  #nav-menu .nav-search-input {
+    width: 100%;
+  }
+}
 </style>
 {% block head %}{% endblock %}
 </head>
@@ -116,16 +212,29 @@ a{color:inherit;text-decoration:none;}
 <nav class="nav">
   <a href="/" class="nav-brand">🛍 ApnaDukaan</a>
   <div class="nav-actions">
-    {% if session.customer_name %}
+    <!-- Hamburger button -->
+    <div class="hamburger" onclick="togglemenu()">=</div>
+    <!-- menu -->
+    <div id="nav-menu" class="nav-menu">
+      {% if session.customer_name %}
       <span class="nav-user">👤 {{ session.customer_name }}</span>
-      <a href="/my-orders" class="btn btn-outline btn-sm">My Orders</a>
+      <form action="/search_product" method="GET" class="nav-search">
+        <input 
+          type="text" 
+          name="q" 
+          placeholder="Search products..." 
+          class="nav-search-input"
+        >
+        <!-- <button type="submit" class="btn btn-primary">Search</button> -->
+      </form>
+      <a href="/my-orders" class="btn btn-outline btn-sm">🛒 My Orders</a>
       <a href="/my-points" class="btn btn-outline btn-sm">⭐ Points</a>
       <a href="/scan" class="btn btn-outline btn-sm">📷 Scan</a>
       {% if cart_count > 0 %}
         <span class="points-pill">🛒 {{ cart_count }} · ₹{{ cart_total }}</span>
       {% endif %}
-      <a href="/notifications" class="notif-bell" title="Notifications">
-        🔔{% if notif_count > 0 %}<span class="notif-dot">{{ notif_count if notif_count < 100 else '99+' }}</span>{% endif %}
+      <a href="/notifications" class="notif-bell nav-item nav-highlight" title="Notifications">
+        🔔<span>Notifications</span>{% if notif_count > 0 %}<span class="notif-dot">{{ notif_count if notif_count < 100 else '99+' }}</span>{% endif %}
       </a>
       <a href="/customer/logout" class="btn btn-outline btn-sm">Logout</a>
     {% elif session.owner_id %}
@@ -139,6 +248,8 @@ a{color:inherit;text-decoration:none;}
       </a>
       <a href="/owner/logout" class="btn btn-outline btn-sm">Logout</a>
     {% endif %}
+    </div>
+    </div>
   </div>
 </nav>
 <div class="container">
@@ -147,5 +258,21 @@ a{color:inherit;text-decoration:none;}
   {% endfor %}
   {% block content %}{% endblock %}
 </div>
+<script>
+function togglemenu(){
+  const menu = document.getElementById("nav-menu");
+  menu.classList.toggle("show");
+}
+
+// Close when clicking outside
+document.addEventListener("click", function(e){
+  const menu = document.getElementById("nav-menu");
+  const burger = document.querySelector(".hamburger");
+
+  if (!menu.contains(e.target) && !burger.contains(e.target)) {
+    menu.classList.remove("show");
+  }
+});
+</script>
 </body>
 </html>

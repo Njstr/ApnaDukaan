@@ -4,6 +4,7 @@ New: product images, rich product pages, mutual ratings, AI review summaries, da
 Run dev:  python app.py
 Run prod: gunicorn -w 4 -b 0.0.0.0:8000 wsgi:app
 """
+import math
 import sqlite3, os, json, uuid, base64, io, re, html
 import logging, logging.handlers, time, hashlib
 from collections import defaultdict
@@ -173,6 +174,21 @@ CREATE TABLE IF NOT EXISTS notifications(
   created_at     TEXT NOT NULL DEFAULT(datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_notif_recipient ON notifications(recipient_type,recipient_id,is_read);
+-- Ledger system (isolated, safe)
+CREATE TABLE IF NOT EXISTS ledger_customers(
+  id TEXT PRIMARY KEY,
+  store_id TEXT,
+  name TEXT,
+  phone TEXT
+);
+
+CREATE TABLE IF NOT EXISTS ledger_entries(
+  id TEXT PRIMARY KEY,
+  customer_id TEXT,
+  amount REAL,
+  type TEXT,
+  date TEXT
+);
 """
 
 def init_db(db_path):
@@ -202,6 +218,9 @@ def _run_migrations(conn):
         ("stores","image_mime","TEXT NOT NULL DEFAULT'image/jpeg'"),
         ("transactions","note","TEXT"),
         ("reviews","store_id","TEXT NOT NULL DEFAULT''"),
+        ("products","stock","INTEGER NOT NULL DEFAULT 0"),
+        ("stores","latitude","REAL"),
+        ("stores","longitude","REAL"),
     ]
     # Ensure notifications table exists (cannot ALTER, it's a new table)
     conn.executescript("""
@@ -314,6 +333,19 @@ def rate_limit(limit_key):
 # ── VALIDATION ────────────────────────────────────────────────────────────────
 _USERNAME_RE = re.compile(r'^[a-z0-9_]{3,40}$')
 def sanitize(v, n=200): return html.escape(str(v or"").strip()[:n])
+def calculate_distance(lat1, lon1, lat2, lon2):
+    R = 6371  # km
+
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+
+    a = (math.sin(dlat/2)**2 +
+         math.cos(math.radians(lat1)) *
+         math.cos(math.radians(lat2)) *
+         math.sin(dlon/2)**2)
+
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+    return R * c
 def validate_username(u):
     if not _USERNAME_RE.match(u): return "Username: 3–40 chars, lowercase/numbers/underscores only."
 def validate_price(v):
@@ -557,7 +589,10 @@ def _register_error_handlers(app):
 # ROUTES
 # ══════════════════════════════════════════════════════════════════════════════
 def _register_routes(app):
-
+    @app.route("/search")
+    @customer_required
+    def search_page():
+        return render_template("search.html")
     @app.before_request
     def enforce_roles():
         app.logger.info("%s %s ip=%s u=%s role=%s",
@@ -690,6 +725,44 @@ def _register_routes(app):
                                rating_count=r_cnt,reviews=reviews,ai_summary=ai_summary,
                                freq_together=freq,also_browsed=also,existing_review=existing_rev,
                                has_purchased=has_bought,cart=session.get("cart",{}),customer_name=cname)
+    
+    @app.route("/search_product")
+    @customer_required
+    def search_product():
+        q = sanitize(request.args.get("q",""),100).lower()
+        user_lat = float(request.args.get("lat", 0))
+        user_lng = float(request.args.get("lng", 0))
+
+        conn = get_db()
+
+        rows = conn.execute("""
+            SELECT p.name, p.price, p.store_id,
+                s.name as store_name, s.latitude, s.longitude
+            FROM products p
+            JOIN stores s ON p.store_id = s.store_id
+            WHERE LOWER(p.name) LIKE ?
+            AND p.available=1 AND s.is_open=1
+        """, (f"%{q}%",)).fetchall()
+
+        results = []
+        for r in rows:
+            dist = calculate_distance(
+                user_lat, user_lng,
+                r["latitude"] or 0,
+                r["longitude"] or 0
+            )
+            results.append({
+                "product": r["name"],
+                "price": r["price"],
+                "store": r["store_name"],
+                "store_id": r["store_id"],
+                "distance": round(dist, 2),
+                "lat": r["latitude"],
+                "lng": r["longitude"]
+            })
+
+        results.sort(key=lambda x: (x["price"], x["distance"]))
+        return render_template("search.html", results=results, query=q)
 
     # ── REVIEWS ───────────────────────────────────────────────────────────────
     @app.route("/review/submit",methods=["POST"])
@@ -1155,6 +1228,21 @@ def _register_routes(app):
             sanitize(request.form.get("spec3_val",""),100),
         )
         return conn, sid, fields
+
+    @app.route("/owner/update_stock", methods=["POST"])
+    @owner_required
+    def update_stock():
+        pid = request.form.get("product_id")
+        stock = int(request.form.get("stock"))
+
+        conn = get_db()
+        conn.execute(
+            "UPDATE products SET stock=? WHERE product_id=?",
+            (stock, pid)
+        )
+        conn.commit()
+
+        return redirect(url_for("owner_products"))
 
     @app.route("/owner/product/add",methods=["GET","POST"])
     @owner_required

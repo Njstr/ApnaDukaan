@@ -1,0 +1,21 @@
+{% if store.latitude and store.longitude %}
+<div id="map-{{ store.store_id }}" 
+     style="height:180px; border-radius:10px; margin-top:8px; border:1px solid var(--border);">
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+  var map{{ store.store_id }} = L.map('map-{{ store.store_id }}', {
+    zoomControl: false,
+    attributionControl: false
+  }).setView([{{ store.latitude }}, {{ store.longitude }}], 15);
+
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map{{ store.store_id }});
+
+  L.marker([{{ store.latitude }}, {{ store.longitude }}])
+    .addTo(map{{ store.store_id }});
+
+});
+</script>
+{% endif %}
