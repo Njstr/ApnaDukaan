@@ -744,3 +744,35 @@
 2026-03-26 05:39:16 INFO GET / ip=192.168.29.53 u=anon role=-
 2026-03-26 05:39:17 INFO GET /favicon.ico ip=192.168.29.53 u=anon role=-
 2026-03-26 05:45:48 INFO GET / ip=192.168.29.53 u=anon role=-
+2026-03-26 06:03:29 INFO GET / ip=192.168.29.53 u=anon role=-
+2026-03-26 06:03:31 INFO GET /owner/register ip=192.168.29.53 u=anon role=-
+2026-03-26 06:03:38 INFO GET /owner/login ip=192.168.29.53 u=anon role=-
+2026-03-26 06:03:46 INFO POST /owner/login ip=192.168.29.53 u=anon role=-
+2026-03-26 06:03:46 WARNING Failed owner login: neehaljaju ip=192.168.29.53
+2026-03-26 06:03:54 INFO POST /owner/login ip=192.168.29.53 u=anon role=-
+2026-03-26 06:03:54 WARNING Failed owner login: neehaljaju ip=192.168.29.53
+2026-03-26 06:03:59 INFO GET / ip=192.168.29.53 u=anon role=-
+2026-03-26 06:04:00 INFO GET /owner/register ip=192.168.29.53 u=anon role=-
+2026-03-26 06:04:43 INFO POST /owner/register ip=192.168.29.53 u=anon role=-
+2026-03-26 06:04:43 INFO GET /owner/dashboard ip=192.168.29.53 u=neehal jaju role=owner
+2026-03-26 06:04:46 INFO GET /owner/logout ip=192.168.29.53 u=neehal jaju role=owner
+2026-03-26 06:04:46 INFO GET / ip=192.168.29.53 u=anon role=-
+2026-03-26 06:04:47 INFO GET /customer ip=192.168.29.53 u=anon role=-
+2026-03-26 06:04:50 INFO POST /customer ip=192.168.29.53 u=anon role=-
+2026-03-26 06:04:50 INFO GET /stores ip=192.168.29.53 u=njstar role=customer
+2026-03-26 06:04:51 INFO GET /store/store_956df7d0 ip=192.168.29.53 u=njstar role=customer
+2026-03-26 06:04:56 INFO GET /customer/logout ip=192.168.29.53 u=njstar role=customer
+2026-03-26 06:04:56 INFO GET / ip=192.168.29.53 u=anon role=-
+2026-03-26 06:04:58 INFO GET /owner/register ip=192.168.29.53 u=anon role=-
+2026-03-26 06:04:59 INFO GET /owner/login ip=192.168.29.53 u=anon role=-
+2026-03-26 06:05:07 INFO POST /owner/login ip=192.168.29.53 u=anon role=-
+2026-03-26 06:05:07 INFO GET /owner/dashboard ip=192.168.29.53 u=neehal jaju role=owner
+2026-03-26 06:05:09 INFO GET /owner/product/add ip=192.168.29.53 u=neehal jaju role=owner
+2026-03-26 06:05:31 INFO POST /owner/product/add ip=192.168.29.53 u=neehal jaju role=owner
+2026-03-26 06:05:31 INFO GET /owner/products ip=192.168.29.53 u=neehal jaju role=owner
+2026-03-26 06:05:33 INFO GET /owner/logout ip=192.168.29.53 u=neehal jaju role=owner
+2026-03-26 06:05:33 INFO GET / ip=192.168.29.53 u=anon role=-
+2026-03-26 06:05:34 INFO GET /customer ip=192.168.29.53 u=anon role=-
+2026-03-26 06:05:37 INFO POST /customer ip=192.168.29.53 u=anon role=-
+2026-03-26 06:05:37 INFO GET /stores ip=192.168.29.53 u=njstar role=customer
+2026-03-26 06:05:40 INFO GET /search_product ip=192.168.29.53 u=njstar role=customer

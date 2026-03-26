@@ -19,7 +19,7 @@
         <form method="POST" action="/scan">
           <input type="hidden" name="qr_data" value="{{ o.qr_code }}">
           <button class="btn btn-primary btn-sm" type="submit" style="width:100%; justify-content:center;">
-            ✓ Simulate QR Scan for {{ o.store_name }}
+            ✓ Scan QR for {{ o.store_name }}
           </button>
         </form>
       </div>
@@ -31,14 +31,14 @@
   <div class="card" style="margin-bottom:16px;">
     <div style="font-weight:700; margin-bottom:12px;">Enter QR Code Manually</div>
     <p style="font-size:13px; color:var(--muted); margin-bottom:14px;">
-      In production, your phone camera scans the QR automatically. For testing, enter the QR code text or use the buttons above.
+      Please use the phone camera to scan the QR.
     </p>
     <form method="POST" action="/scan">
       <div class="form-group">
         <label class="form-label">QR Code Data</label>
         <input class="form-input" name="qr_data" placeholder="e.g. STORE:store_001:abc12345" required>
       </div>
-      <button class="btn btn-primary" type="submit" style="width:100%; justify-content:center;">Verify Visit</button>
+      <button class="btn btn-primary" type="submit" style="width:100%; justify-content:center;">Verify Purchase</button>
     </form>
   </div>
 
@@ -48,7 +48,7 @@
       <li>Your order must be in <strong>placed / preparing / ready</strong> status</li>
       <li>Visit the physical store during your booked time slot</li>
       <li>Scan the QR code displayed at the store entrance</li>
-      <li>System verifies your visit and notifies the store owner</li>
+      <li>System verifies your purchase and notifies the store owner</li>
       <li>Confirm you received your items → both earn points</li>
     </ol>
   </div>
