@@ -740,3 +740,7 @@
 2026-03-25 23:30:30 INFO GET /stores ip=192.168.29.53 u=njstar role=customer
 2026-03-25 23:30:38 INFO GET /store/store_020d809c ip=192.168.29.53 u=njstar role=customer
 2026-03-25 23:30:43 INFO GET /stores ip=192.168.29.53 u=njstar role=customer
+2026-03-26 05:39:16 INFO GET / ip=192.168.29.53 u=anon role=-
+2026-03-26 05:39:16 INFO GET / ip=192.168.29.53 u=anon role=-
+2026-03-26 05:39:17 INFO GET /favicon.ico ip=192.168.29.53 u=anon role=-
+2026-03-26 05:45:48 INFO GET / ip=192.168.29.53 u=anon role=-
