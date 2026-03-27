@@ -176,6 +176,15 @@ CREATE TABLE IF NOT EXISTS notifications(
   created_at     TEXT NOT NULL DEFAULT(datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_notif_recipient ON notifications(recipient_type,recipient_id,is_read);
+CREATE TABLE IF NOT EXISTS fcm_tokens(
+  token_id       TEXT PRIMARY KEY,
+  recipient_type TEXT NOT NULL CHECK(recipient_type IN('customer','owner')),
+  recipient_id   TEXT NOT NULL,
+  fcm_token      TEXT NOT NULL UNIQUE,
+  created_at     TEXT NOT NULL DEFAULT(datetime('now')),
+  last_seen      TEXT NOT NULL DEFAULT(datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_fcm_recipient ON fcm_tokens(recipient_type,recipient_id);
 -- Ledger system (isolated, safe)
 CREATE TABLE IF NOT EXISTS ledger_customers(
   id TEXT PRIMARY KEY,
@@ -225,6 +234,17 @@ def _run_migrations(conn):
         ("stores","longitude","REAL"),
     ]
     # Ensure notifications table exists (cannot ALTER, it's a new table)
+    conn.executescript("""
+    CREATE TABLE IF NOT EXISTS fcm_tokens(
+      token_id TEXT PRIMARY KEY,
+      recipient_type TEXT NOT NULL,
+      recipient_id   TEXT NOT NULL,
+      fcm_token      TEXT NOT NULL UNIQUE,
+      created_at     TEXT NOT NULL DEFAULT(datetime('now')),
+      last_seen      TEXT NOT NULL DEFAULT(datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_fcm_recipient ON fcm_tokens(recipient_type,recipient_id);
+    """)
     conn.executescript("""
     CREATE TABLE IF NOT EXISTS notifications(
       notif_id TEXT PRIMARY KEY,
@@ -448,6 +468,134 @@ def push_notification(recipient_type, recipient_id, title, body, icon='🔔', li
         conn.commit()
     except Exception:
         pass  # notifications are best-effort
+
+# ── FCM PUSH ─────────────────────────────────────────────────────────────────
+# Maps event names to (title_template, body_template, link_template).
+# {name} = customer name, {store} = store name, {id} = order_id
+FCM_EVENTS = {
+    "order_placed":          ("🛒 New Order",          "{name} placed an order · ₹{amount}",       "/owner/orders"),
+    "order_ready":           ("✅ Order Ready!",        "Your order at {store} is ready for pickup!", "/my-orders"),
+    "order_complete":        ("🎉 Order Completed",     "Order at {store} completed. +10 pts!",       "/my-orders"),
+    "order_visited":         ("📦 Customer Arrived",   "{name} just scanned in at your store.",      "/owner/orders"),
+    "order_handover_owner":  ("🤝 Handover Confirmed", "Store confirmed handover for order {id}.",   "/my-orders"),
+    "order_handover_cust":   ("🤝 Handover Confirmed", "{name} confirmed receipt of order {id}.",    "/owner/orders"),
+    "no_show":               ("❌ No-Show",             "Order {id} marked as no-show.",              "/my-orders"),
+    "order_failed":          ("❌ Order Failed",        "Order {id} could not be fulfilled.",         "/my-orders"),
+}
+
+def push_fcm(recipient_type, recipient_id, title, body, link='/'):
+    """Send a Firebase Cloud Messaging push to all tokens registered for this recipient."""
+    from flask import current_app
+    server_key = current_app.config.get("FCM_SERVER_KEY", "")
+    project_id = current_app.config.get("FCM_PROJECT_ID", "")
+    if not server_key or not project_id:
+        return  # FCM not configured — silently skip
+
+    try:
+        conn = get_db()
+        rows = conn.execute(
+            "SELECT fcm_token FROM fcm_tokens WHERE recipient_type=? AND recipient_id=?",
+            (recipient_type, recipient_id)
+        ).fetchall()
+        if not rows:
+            return
+
+        import urllib.request as _ur
+        for row in rows:
+            token = row["fcm_token"]
+            payload = json.dumps({
+                "message": {
+                    "token": token,
+                    "notification": {"title": title, "body": body},
+                    "data": {"title": title, "body": body, "link": link},
+                    "android": {
+                        "notification": {
+                            "click_action": "FLUTTER_NOTIFICATION_CLICK",
+                            "sound": "default",
+                            "priority": "high",
+                        }
+                    },
+                    "webpush": {
+                        "fcm_options": {"link": link},
+                        "notification": {"requireInteraction": False, "vibrate": [200, 100, 200]},
+                    },
+                }
+            }).encode()
+            req = _ur.Request(
+                f"https://fcm.googleapis.com/v1/projects/{project_id}/messages:send",
+                data=payload,
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {_get_fcm_access_token(server_key)}",
+                },
+                method="POST",
+            )
+            try:
+                with _ur.urlopen(req, timeout=5) as resp:
+                    pass  # success
+            except Exception as e:
+                current_app.logger.warning("FCM send failed for token %s: %s", token[:20], e)
+                # Remove invalid/expired tokens (401/404 from FCM)
+                if hasattr(e, 'code') and e.code in (400, 404):
+                    conn.execute("DELETE FROM fcm_tokens WHERE fcm_token=?", (token,))
+                    conn.commit()
+    except Exception as e:
+        current_app.logger.warning("push_fcm error: %s", e)
+
+
+def _get_fcm_access_token(service_account_json_str):
+    """Exchange a Firebase service-account JSON string for a short-lived OAuth2 bearer token."""
+    import time, base64 as _b64, hmac as _hmac, hashlib as _hl
+    try:
+        sa = json.loads(service_account_json_str)
+        now = int(time.time())
+        header  = _b64.urlsafe_b64encode(json.dumps({"alg":"RS256","typ":"JWT"}).encode()).rstrip(b'=')
+        payload = _b64.urlsafe_b64encode(json.dumps({
+            "iss": sa["client_email"],
+            "scope": "https://www.googleapis.com/auth/firebase.messaging",
+            "aud": "https://oauth2.googleapis.com/token",
+            "iat": now, "exp": now + 3600,
+        }).encode()).rstrip(b'=')
+        # Sign with RSA private key using cryptography library if available,
+        # otherwise fall back to storing the Legacy Server Key directly.
+        try:
+            from cryptography.hazmat.primitives import serialization, hashes
+            from cryptography.hazmat.primitives.asymmetric import padding
+            from cryptography.hazmat.backends import default_backend
+            import urllib.request as _ur, urllib.parse as _up
+            private_key = serialization.load_pem_private_key(
+                sa["private_key"].encode(), password=None, backend=default_backend())
+            sig_input = header + b'.' + payload
+            sig = _b64.urlsafe_b64encode(
+                private_key.sign(sig_input, padding.PKCS1v15(), hashes.SHA256())).rstrip(b'=')
+            jwt_token = (sig_input + b'.' + sig).decode()
+            req = _ur.Request("https://oauth2.googleapis.com/token",
+                data=_up.urlencode({"grant_type":"urn:ietf:params:oauth:grant-type:jwt-bearer",
+                                    "assertion": jwt_token}).encode(),
+                headers={"Content-Type":"application/x-www-form-urlencoded"}, method="POST")
+            with _ur.urlopen(req, timeout=10) as r:
+                return json.loads(r.read())["access_token"]
+        except ImportError:
+            # cryptography not installed — caller should use Legacy HTTP API with server key directly
+            return service_account_json_str  # will be used as Bearer token (legacy key fallback)
+    except Exception:
+        return service_account_json_str
+
+
+def push_fcm_event(event, recipient_type, recipient_id, **kwargs):
+    """Fire a named FCM push event with template substitution."""
+    tmpl = FCM_EVENTS.get(event)
+    if not tmpl:
+        return
+    title_t, body_t, link_t = tmpl
+    try:
+        title = title_t.format(**kwargs)
+        body  = body_t.format(**kwargs)
+        link  = kwargs.get("link", link_t)
+    except KeyError:
+        title, body, link = title_t, body_t, link_t
+    push_fcm(recipient_type, recipient_id, title, body, link)
+
 
 def get_unread_count(recipient_type, recipient_id):
     try:
@@ -1070,7 +1218,9 @@ def _register_routes(app):
             f"{cname} ordered {item_count} item{'s' if item_count!=1 else ''} for {pickup_date} · ₹{round(total,2)}",
             "🆕",
             f"/owner/orders?date={pickup_date}"
-        ) 
+        )
+        push_fcm_event("order_placed", "owner", store_id,
+                       name=cname, amount=round(total,2), id=oid, store=store_row["name"] if store_row else "")
         award_points(cname,"customer","order_placed",oid); update_analytics(store_id)
         session["cart"]={k:v for k,v in cart.items() if v["store_id"]!=store_id}
         flash(f"Order {oid} placed for {pickup_date}! +2 points.","success")
@@ -1135,6 +1285,7 @@ def _register_routes(app):
         conn.execute("INSERT INTO visits(visit_id,order_id,store_id,customer_name,within_slot,verified) VALUES(?,?,?,?,?,1)",
                      (str(uuid.uuid4()),order["order_id"],sid,name,1 if within else 0))
         conn.execute("UPDATE orders SET status='visited',visit_verified=1 WHERE order_id=?",(order["order_id"],))
+        push_fcm_event("order_visited","owner",sid,name=name,id=order["order_id"])
         conn.commit(); update_analytics(sid)
         if within:
             award_points(name,"customer","visit_verified_ontime",order["order_id"])
@@ -1163,9 +1314,17 @@ def _register_routes(app):
                 conn.commit()
                 award_points(o["customer_name"],"customer","order_complete",order_id)
                 award_points(o["store_id"],"store","order_complete",order_id)
+                _sname = conn.execute("SELECT name FROM stores WHERE store_id=?",(o["store_id"],)).fetchone()
+                sname = _sname["name"] if _sname else ""
+                push_fcm_event("order_complete","store",o["store_id"],store=sname,id=order_id,name=session["customer_name"])
                 update_analytics(o["store_id"]); flash("Order completed! +10 points!","success")
             else:
-                conn.commit(); flash("You confirmed receipt. Waiting for store to confirm.","info")
+                conn.commit()
+                push_fcm_event("order_handover_cust","owner",o["store_id"],
+                               name=session["customer_name"], id=order_id)
+                push_notification("owner",o["store_id"],
+                                  "🤝 Customer Confirmed",f"{session['customer_name']} confirmed receipt. Please confirm your side.","🤝",f"/owner/orders")
+                flash("You confirmed receipt. Waiting for store to confirm.","info")
             return redirect(url_for("my_orders"))
         return render_template("confirm_receipt.html",order=order,items=items,customer_name=session["customer_name"])
 
@@ -1477,7 +1636,17 @@ def _register_routes(app):
         sid=session["store_id"]; conn=get_db()
         rows=conn.execute("UPDATE orders SET status='ready' WHERE order_id=? AND store_id=? "
                           "AND status IN('placed','preparing')",(order_id,sid)).rowcount
-        conn.commit(); flash("Order marked as ready!" if rows else "Could not update.","success" if rows else "error")
+        conn.commit()
+        if rows:
+            o_row = conn.execute(
+                "SELECT customer_name, s.name AS store_name FROM orders "
+                "JOIN stores s ON orders.store_id=s.store_id WHERE order_id=?", (order_id,)).fetchone()
+            if o_row:
+                push_fcm_event("order_ready", "customer", o_row["customer_name"],
+                               store=o_row["store_name"], id=order_id)
+                push_notification("customer", o_row["customer_name"],
+                                  "✅ Order Ready!", f"Your order at {o_row['store_name']} is ready for pickup!", "✅", "/my-orders")
+        flash("Order marked as ready!" if rows else "Could not update.","success" if rows else "error")
         return redirect(url_for("owner_orders"))
 
     @app.route("/owner/order/<order_id>/confirm",methods=["POST"])
@@ -1492,9 +1661,17 @@ def _register_routes(app):
             conn.commit()
             award_points(o["customer_name"],"customer","order_complete",order_id)
             award_points(o["store_id"],"store","order_complete",order_id)
+            _sname = conn.execute("SELECT name FROM stores WHERE store_id=?",(o["store_id"],)).fetchone()
+            sname = _sname["name"] if _sname else ""
+            push_fcm_event("order_complete","customer",o["customer_name"],store=sname,id=order_id)
             update_analytics(o["store_id"]); flash("Order completed! +10 store points!","success")
         else:
-            conn.commit(); flash("Handover confirmed. Waiting for customer to confirm.","info")
+            conn.commit()
+            push_fcm_event("order_handover_owner","customer",o["customer_name"],
+                           store="", id=order_id, name=session.get("owner_name","Store"))
+            push_notification("customer",o["customer_name"],
+                              "🤝 Handover Confirmed","Store confirmed your order handover. Please confirm receipt.","🤝",f"/confirm-receipt/{order_id}")
+            flash("Handover confirmed. Waiting for customer to confirm.","info")
         return redirect(url_for("owner_orders"))
 
     @app.route("/owner/qr")
@@ -1629,6 +1806,49 @@ def _register_routes(app):
         stats={k:conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]
                for k,t in [("owners","owners"),("stores","stores"),("orders","orders"),("reviews","reviews")]}
         return render_template("admin/settings.html",stats=stats)
+
+    # ── FCM TOKEN REGISTRATION ────────────────────────────────────────────────
+    @app.route("/api/fcm-token", methods=["POST"])
+    def register_fcm_token():
+        """Register or refresh an FCM device token for the current user."""
+        data = request.get_json(silent=True) or {}
+        token = (data.get("token") or "").strip()
+        if not token:
+            return jsonify({"ok": False, "error": "token required"}), 400
+
+        role = session.get("role")
+        if role == "customer":
+            rtype = "customer"
+            rid   = session.get("customer_name", "")
+        elif role == "owner":
+            rtype = "owner"
+            rid   = session.get("store_id", "")
+        else:
+            return jsonify({"ok": False, "error": "not logged in"}), 401
+
+        if not rid:
+            return jsonify({"ok": False, "error": "session incomplete"}), 401
+
+        conn = get_db()
+        conn.execute("""
+            INSERT INTO fcm_tokens(token_id, recipient_type, recipient_id, fcm_token, last_seen)
+            VALUES(?, ?, ?, ?, datetime('now'))
+            ON CONFLICT(fcm_token) DO UPDATE SET
+                recipient_type=excluded.recipient_type,
+                recipient_id=excluded.recipient_id,
+                last_seen=datetime('now')
+        """, (str(uuid.uuid4()), rtype, rid, token))
+        conn.commit()
+        return jsonify({"ok": True})
+
+    @app.route("/firebase-messaging-sw.js")
+    def firebase_sw():
+        """Serve the Firebase service worker from static/ at the root path (required by FCM)."""
+        from flask import current_app
+        return current_app.send_static_file("firebase-messaging-sw.js"), 200, {
+            "Content-Type": "application/javascript; charset=utf-8",
+            "Service-Worker-Allowed": "/",
+        }
 
     # ── NOTIFICATIONS ─────────────────────────────────────────────────────────
 
