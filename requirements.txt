@@ -3,3 +3,4 @@ Werkzeug>=3.0
 gunicorn>=21.0
 qrcode[pil]>=7.4
 Pillow>=10.0
+requests
