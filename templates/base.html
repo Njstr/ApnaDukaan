@@ -23,12 +23,15 @@ a{color:inherit;text-decoration:none;}
   cursor:pointer;
 }
 @media(min-width:769px){
-  .nav-actions a span {
+  /* Hide label text spans on desktop, but keep notif-dot visible */
+  .nav-actions a span:not(.notif-dot) {
     display: none;
   }
-
-  .nav-highlight span {
-    display: inline; /* only this one shows text */
+  /* On desktop the bell is a 34px circle - dot stays top-right absolute */
+  .notif-dot {
+    position: absolute;
+    top: -4px;
+    right: -4px;
   }
 }
 /* Search container */
@@ -128,10 +131,10 @@ a{color:inherit;text-decoration:none;}
   width:34px;height:34px;border-radius:50%;border:1.5px solid var(--border);
   background:var(--card);cursor:pointer;font-size:16px;transition:all .15s;}
 .notif-bell:hover{border-color:var(--orange);background:var(--ol);}
-.notif-dot{position:absolute;top:2px;right:2px;background:var(--red);color:#fff;
+.notif-dot{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;
   border-radius:50%;min-width:17px;height:17px;font-size:10px;font-weight:700;
-  display:flex;align-items:center;justify-content:center;padding:0 3px;
-  border:2px solid var(--card);}
+  display:inline-flex;align-items:center;justify-content:center;padding:0 3px;
+  border:2px solid var(--card);line-height:1;}
 /* Notification list */
 .notif-item{display:flex;gap:12px;padding:14px;border-bottom:1px solid var(--border);
   align-items:flex-start;transition:background .1s;}
@@ -190,6 +193,25 @@ a{color:inherit;text-decoration:none;}
     font-size: 13px;
   }
 
+  /* In the mobile dropdown, bell becomes a full-width row like other items */
+  #nav-menu .notif-bell {
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+    border: 1.5px solid var(--border);
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  /* In the dropdown, dot sits inline after text — no absolute positioning */
+  #nav-menu .notif-dot {
+    position: static;
+    margin-left: auto;
+  }
+
   .nav-search {
     display: none; /* hide in navbar */
   }
@@ -207,6 +229,112 @@ a{color:inherit;text-decoration:none;}
 }
 </style>
 {% block head %}{% endblock %}
+
+<!-- Firebase Push Notifications -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
+<script>
+// ── REPLACE with your Firebase project config ──────────────────────────────
+const _fbConfig = {
+  apiKey:            "REPLACE_API_KEY",
+  authDomain:        "REPLACE_AUTH_DOMAIN",
+  projectId:         "REPLACE_PROJECT_ID",
+  storageBucket:     "REPLACE_STORAGE_BUCKET",
+  messagingSenderId: "REPLACE_MESSAGING_SENDER_ID",
+  appId:             "REPLACE_APP_ID",
+};
+const _fbVapidKey = "REPLACE_VAPID_KEY"; // Project Settings → Cloud Messaging → Web Push certificates
+// ───────────────────────────────────────────────────────────────────────────
+
+const _userRole = {{ session.get('role')|tojson }};
+const _loggedIn  = !!_userRole;
+
+if (_loggedIn && 'serviceWorker' in navigator && 'Notification' in window) {
+  firebase.initializeApp(_fbConfig);
+  const _messaging = firebase.messaging();
+
+  async function _registerFcmToken() {
+    try {
+      const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
+      const token = await _messaging.getToken({ vapidKey: _fbVapidKey, serviceWorkerRegistration: reg });
+      if (token) {
+        await fetch('/api/fcm-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token }),
+        });
+      }
+    } catch (e) {
+      console.warn('FCM token registration failed:', e);
+    }
+  }
+
+  // Request permission only if not yet granted/denied
+  if (Notification.permission === 'granted') {
+    _registerFcmToken();
+  } else if (Notification.permission !== 'denied') {
+    // Show a subtle prompt banner rather than firing the native dialog immediately
+    document.addEventListener('DOMContentLoaded', function () {
+      const banner = document.createElement('div');
+      banner.id = 'push-permission-banner';
+      banner.style.cssText = [
+        'position:fixed','bottom:20px','left:50%','transform:translateX(-50%)',
+        'background:#1A1714','color:#fff','border-radius:12px',
+        'padding:14px 20px','display:flex','align-items:center','gap:14px',
+        'box-shadow:0 4px 24px rgba(0,0,0,.25)','z-index:9999',
+        'font-family:inherit','font-size:14px','max-width:calc(100vw - 40px)',
+        'animation:slideUp .3s ease',
+      ].join(';');
+      banner.innerHTML = `
+        <span style="font-size:22px">🔔</span>
+        <span style="flex:1;line-height:1.4">Enable notifications to get order updates instantly.</span>
+        <button id="push-allow-btn" style="background:#E85D24;color:#fff;border:none;border-radius:8px;
+          padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit">
+          Allow
+        </button>
+        <button onclick="this.closest('#push-permission-banner').remove()" style="background:none;border:none;
+          color:#9CA3AF;font-size:20px;cursor:pointer;padding:0;line-height:1">✕</button>
+      `;
+      document.body.appendChild(banner);
+
+      document.getElementById('push-allow-btn').addEventListener('click', async function () {
+        banner.remove();
+        const perm = await Notification.requestPermission();
+        if (perm === 'granted') _registerFcmToken();
+      });
+    });
+  }
+
+  // Handle foreground messages (app is open) — show a toast
+  _messaging.onMessage(function (payload) {
+    const n = payload.notification || payload.data || {};
+    const title = n.title || 'ApnaDukaan';
+    const body  = n.body  || '';
+    const link  = (payload.data || {}).link || '#';
+
+    const toast = document.createElement('div');
+    toast.style.cssText = [
+      'position:fixed','top:70px','right:20px','background:#1A1714',
+      'color:#fff','border-radius:12px','padding:14px 18px',
+      'max-width:320px','box-shadow:0 4px 24px rgba(0,0,0,.25)',
+      'z-index:9999','font-family:inherit','cursor:pointer',
+      'animation:slideDown .25s ease',
+    ].join(';');
+    toast.innerHTML = `
+      <div style="font-weight:700;font-size:14px;margin-bottom:4px">${title}</div>
+      <div style="font-size:13px;color:#D1D5DB;line-height:1.4">${body}</div>
+    `;
+    toast.addEventListener('click', () => { window.location.href = link; });
+    document.body.appendChild(toast);
+    setTimeout(() => toast.style.opacity = '0', 4500);
+    setTimeout(() => toast.remove(), 5000);
+  });
+}
+</script>
+<style>
+@keyframes slideUp   { from { opacity:0; transform:translateX(-50%) translateY(20px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+@keyframes slideDown { from { opacity:0; transform:translateY(-10px); } to { opacity:1; transform:translateY(0); } }
+</style>
 </head>
 <body>
 <nav class="nav">
@@ -236,7 +364,7 @@ a{color:inherit;text-decoration:none;}
         <span class="points-pill">🛒 {{ cart_count }} · ₹{{ cart_total }}</span>
       {% endif %}
       <a href="/notifications" class="notif-bell nav-item nav-highlight" title="Notifications">
-        🔔<span>Notifications</span>{% if notif_count > 0 %}<span class="notif-dot">{{ notif_count if notif_count < 100 else '99+' }}</span>{% endif %}
+        🔔<span class="notif-label"> Notifications</span>{% if notif_count > 0 %}<span class="notif-dot">{{ notif_count if notif_count < 100 else '99+' }}</span>{% endif %}
       </a>
       <a href="/customer/logout" class="btn btn-outline btn-sm">Logout</a>
     {% elif session.owner_id %}
@@ -245,8 +373,8 @@ a{color:inherit;text-decoration:none;}
       <a href="/owner/products" class="btn btn-outline btn-sm">Products</a>
       <a href="/owner/orders" class="btn btn-outline btn-sm">Orders</a>
       <a href="/owner/analytics" class="btn btn-outline btn-sm">Analytics</a>
-      <a href="/owner/notifications" class="notif-bell" title="Notifications">
-        🔔{% if notif_count > 0 %}<span class="notif-dot">{{ notif_count if notif_count < 100 else '99+' }}</span>{% endif %}
+      <a href="/owner/notifications" class="notif-bell nav-item nav-highlight" title="Notifications">
+        🔔<span class="notif-label"> Notifications</span>{% if notif_count > 0 %}<span class="notif-dot">{{ notif_count if notif_count < 100 else '99+' }}</span>{% endif %}
       </a>
       <a href="/owner/logout" class="btn btn-outline btn-sm">Logout</a>
     {% endif %}
