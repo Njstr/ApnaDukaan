@@ -10,12 +10,12 @@ importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-com
 
 // ── REPLACE with your Firebase project config ──────────────────────────────
 firebase.initializeApp({
-  apiKey:            "REPLACE_API_KEY",
-  authDomain:        "REPLACE_AUTH_DOMAIN",
-  projectId:         "REPLACE_PROJECT_ID",
-  storageBucket:     "REPLACE_STORAGE_BUCKET",
-  messagingSenderId: "REPLACE_MESSAGING_SENDER_ID",
-  appId:             "REPLACE_APP_ID",
+  apiKey:            "AIzaSyCYsPGQqOu7cqbG5IZoESu0Ha9Q4IHYpEM",
+  authDomain:        "apnadukaan-d47a8.firebaseapp.com",
+  projectId:         "apnadukaan-d47a88",
+  storageBucket:     "apnadukaan-d47a8.firebasestorage.app",
+  messagingSenderId: "703142953576",
+  appId:             "1:703142953576:web:ed949411b5b1d8a8e771dd",
 });
 // ───────────────────────────────────────────────────────────────────────────
 
