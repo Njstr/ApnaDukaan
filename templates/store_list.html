@@ -1,76 +1,411 @@
 {% extends "base.html" %}
 {% block title %}Browse Stores – ApnaDukaan{% endblock %}
 {% block content %}
-<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+
+<style>
+  /* ── Nearby toggle button ── */
+  .nearby-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    border-radius: 999px;
+    border: 2px solid var(--border);
+    background: var(--card-bg, #fff);
+    color: var(--text, #111);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+    user-select: none;
+  }
+  .nearby-btn:hover { border-color: var(--orange); color: var(--orange); }
+  .nearby-btn.active {
+    background: var(--orange);
+    border-color: var(--orange);
+    color: #fff;
+  }
+  .nearby-btn .pulse-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    display: inline-block;
+    animation: pulse-ring 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse-ring {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: .5; transform: scale(1.4); }
+  }
+
+  /* ── Distance badge on card ── */
+  .dist-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--orange, #e85d04);
+    background: rgba(232,93,4,.1);
+    border-radius: 6px;
+    padding: 2px 7px;
+    letter-spacing: .3px;
+  }
+
+  /* ── Status bar below toggle ── */
+  #nearby-status {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 8px;
+    min-height: 20px;
+    transition: opacity .2s;
+  }
+  #nearby-status.error { color: #ef4444; }
+  #nearby-status.success { color: #16a34a; }
+
+  /* ── Spinner ── */
+  .spin {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,.5);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    vertical-align: middle;
+    margin-right: 4px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Hidden store card ── */
+  .store-card-wrap { transition: opacity .2s; }
+  .store-card-wrap.hidden-by-nearby {
+    display: none;
+  }
+
+  /* ── Location denied banner ── */
+  #location-denied-banner {
+    display: none;
+    align-items: flex-start;
+    gap: 14px;
+    background: #fff7ed;
+    border: 1.5px solid #fdba74;
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 18px;
+  }
+  #location-denied-banner .banner-icon { font-size: 28px; flex-shrink:0; line-height:1; }
+  #location-denied-banner .banner-body { flex: 1; }
+  #location-denied-banner .banner-title {
+    font-size: 14px; font-weight: 700; color: #9a3412; margin-bottom: 4px;
+  }
+  #location-denied-banner .banner-steps {
+    font-size: 13px; color: #7c2d12; line-height: 1.7; margin: 6px 0 0;
+    padding-left: 16px;
+  }
+  #location-denied-banner .banner-close {
+    background: none; border: none; cursor: pointer;
+    color: #9a3412; font-size: 18px; line-height: 1; padding: 0; flex-shrink:0;
+  }
+
+  /* ── Empty state ── */
+  #no-nearby-msg {
+    display: none;
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 48px 16px;
+    color: var(--muted);
+  }
+  #no-nearby-msg .big-icon { font-size: 48px; margin-bottom: 12px; }
+</style>
+
+{# ── Page header ── #}
+<div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
   <div>
     <h1 class="page-title">Nearby Stores</h1>
     <p class="page-subtitle">Hello {{ customer_name }}! Pick a store to book from.</p>
   </div>
-  <a href="/scan" class="btn btn-primary">📷 Scan Store QR</a>
+  <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+    <button id="nearby-toggle" class="nearby-btn" onclick="toggleNearby()">
+      <span class="pulse-dot"></span> Show Nearby Only
+    </button>
+    <a href="/scan" class="btn btn-primary">📷 Scan Store QR</a>
+  </div>
 </div>
 
-<div class="grid2">
+<div id="nearby-status"></div>
+
+{# ── Location denied banner ── #}
+<div id="location-denied-banner">
+  <div class="banner-icon">📍</div>
+  <div class="banner-body">
+    <div class="banner-title">Location access is blocked</div>
+    <div id="banner-instructions"></div>
+  </div>
+  <button class="banner-close" onclick="document.getElementById('location-denied-banner').style.display='none'" aria-label="Dismiss">✕</button>
+</div>
+
+{# ── Store grid ── #}
+<div class="grid2" id="store-grid">
+
 {% for item in stores %}
   {% set s = item.store %}
-  <a href="/store/{{ s.store_id }}" style="display:block;">
-    <div class="card" style="height:100%; transition:all .2s; cursor:pointer; padding:0; overflow:hidden;"
-         onmouseover="this.style.borderColor='var(--orange)'; this.style.transform='translateY(-2px)'"
-         onmouseout="this.style.borderColor='var(--border)'; this.style.transform='none'">
+  <div class="store-card-wrap"
+       data-store-id="{{ s.store_id }}"
+       data-lat="{{ s.latitude if s.latitude else '' }}"
+       data-lng="{{ s.longitude if s.longitude else '' }}">
+    <a href="/store/{{ s.store_id }}" style="display:block; height:100%;">
+      <div class="card" style="height:100%; transition:all .2s; cursor:pointer; padding:0; overflow:hidden;"
+           onmouseover="this.style.borderColor='var(--orange)'; this.style.transform='translateY(-2px)'"
+           onmouseout="this.style.borderColor='var(--border)'; this.style.transform='none'">
 
-      {# Store banner image #}
-      {% if s.image_b64 %}
-      <img src="data:{{ s.image_mime }};base64,{{ s.image_b64 }}"
-           alt="{{ s.name }}"
-           style="width:100%; height:140px; object-fit:cover; display:block;">
-      {% endif %}
-
-      <div style="padding:16px;">
-        {# Left: name + meta | Right: star rating #}
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
-          <div style="flex:1; min-width:0; padding-right:12px;">
-            <div style="font-size:17px; font-weight:700; margin-bottom:3px;">{{ s.name }}</div>
-            <span class="tag">{{ s.category }}</span>
-          </div>
-          <div style="text-align:right; flex-shrink:0;">
-            {% if item.avg_rating %}
-            <div style="font-size:22px; font-weight:800; line-height:1;">{{ item.avg_rating }}</div>
-            <div style="color:#F59E0B; font-size:12px; letter-spacing:1px; line-height:1.4;">
-              {% set full = item.avg_rating|int %}
-              {% for i in range(full) %}★{% endfor %}{% for i in range(5-full) %}☆{% endfor %}
-            </div>
-            <div style="font-size:11px; color:var(--muted);">{{ item.rating_count }} review{{ 's' if item.rating_count != 1 }}</div>
-            {% else %}
-            <div style="font-size:20px;">{{ item.icon }}</div>
-            <div style="font-size:12px; color:var(--muted); margin-top:2px;">{{ item.tier }}</div>
-            {% endif %}
-          </div>
-        </div>
-
-        {# Description (if set), else address #}
-        {% if s.description %}
-        <div style="font-size:13px; color:var(--muted); margin-bottom:10px; line-height:1.5;
-                    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
-          {{ s.description }}
-        </div>
-        {% else %}
-        <div style="font-size:13px; color:var(--muted); margin-bottom:10px;">📍 {{ s.address }}</div>
+        {# Store banner image #}
+        {% if s.image_b64 %}
+        <img src="data:{{ s.image_mime }};base64,{{ s.image_b64 }}"
+             alt="{{ s.name }}"
+             style="width:100%; height:140px; object-fit:cover; display:block;">
         {% endif %}
 
-        {# Footer: points + open badge #}
-        <div style="display:flex; align-items:center; justify-content:space-between;">
-          <div style="display:flex; align-items:center; gap:6px;">
-            <div class="points-pill">⭐ {{ item.points }} pts</div>
-            {% if item.avg_rating %}
-            <div style="font-size:11px; color:var(--muted);">{{ item.icon }} {{ item.tier }}</div>
-            {% endif %}
+        <div style="padding:16px;">
+          {# Name + rating row #}
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+            <div style="flex:1; min-width:0; padding-right:12px;">
+              <div style="font-size:17px; font-weight:700; margin-bottom:3px;">{{ s.name }}</div>
+              <span class="tag">{{ s.category }}</span>
+            </div>
+            <div style="text-align:right; flex-shrink:0;">
+              {% if item.avg_rating %}
+              <div style="font-size:22px; font-weight:800; line-height:1;">{{ item.avg_rating }}</div>
+              <div style="color:#F59E0B; font-size:12px; letter-spacing:1px; line-height:1.4;">
+                {% set full = item.avg_rating|int %}
+                {% for i in range(full) %}★{% endfor %}{% for i in range(5-full) %}☆{% endfor %}
+              </div>
+              <div style="font-size:11px; color:var(--muted);">{{ item.rating_count }} review{{ 's' if item.rating_count != 1 }}</div>
+              {% else %}
+              <div style="font-size:20px;">{{ item.icon }}</div>
+              <div style="font-size:12px; color:var(--muted); margin-top:2px;">{{ item.tier }}</div>
+              {% endif %}
+            </div>
           </div>
-          <span class="badge {% if s.is_open %}badge-green{% else %}badge-red{% endif %}">
-            {% if s.is_open %}● Open{% else %}Closed{% endif %}
-          </span>
+
+          {# Description or address #}
+          {% if s.description %}
+          <div style="font-size:13px; color:var(--muted); margin-bottom:10px; line-height:1.5;
+                      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
+            {{ s.description }}
+          </div>
+          {% else %}
+          <div style="font-size:13px; color:var(--muted); margin-bottom:10px;">📍 {{ s.address }}</div>
+          {% endif %}
+
+          {# Footer: points + open badge + distance badge #}
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px;">
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              <div class="points-pill">⭐ {{ item.points }} pts</div>
+              {% if item.avg_rating %}
+              <div style="font-size:11px; color:var(--muted);">{{ item.icon }} {{ item.tier }}</div>
+              {% endif %}
+              {# Distance badge — populated by JS when nearby mode is active #}
+              <span class="dist-badge" id="dist-{{ s.store_id }}" style="display:none;"></span>
+            </div>
+            <span class="badge {% if s.is_open %}badge-green{% else %}badge-red{% endif %}">
+              {% if s.is_open %}● Open{% else %}Closed{% endif %}
+            </span>
+          </div>
+
         </div>
       </div>
-    </div>
-  </a>
+    </a>
+  </div>
 {% endfor %}
-</div>
+
+  {# Empty-state shown when nearby mode is on but no stores qualify #}
+  <div id="no-nearby-msg">
+    <div class="big-icon">🏪</div>
+    <div style="font-size:16px; font-weight:600; margin-bottom:6px;">No open stores within 500 m</div>
+    <div style="font-size:13px;">Try moving around or check back later.</div>
+    <button class="btn btn-secondary" style="margin-top:16px;" onclick="disableNearby()">
+      Show all stores
+    </button>
+  </div>
+
+</div>{# /grid #}
+
+
+<script>
+(function () {
+  var RADIUS_M = 500;
+  var nearbyActive = false;
+  var userLat = null, userLng = null;
+
+  /* ── Haversine distance (metres) ── */
+  function haversineM(lat1, lon1, lat2, lon2) {
+    var R = 6371000;
+    var dLat = (lat2 - lat1) * Math.PI / 180;
+    var dLon = (lon2 - lon1) * Math.PI / 180;
+    var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+
+  function formatDist(m) {
+    return m < 1000 ? Math.round(m) + ' m' : (m/1000).toFixed(1) + ' km';
+  }
+
+  function setStatus(msg, cls) {
+    var el = document.getElementById('nearby-status');
+    el.textContent = msg;
+    el.className = cls || '';
+  }
+
+  function applyFilter() {
+    var cards = document.querySelectorAll('.store-card-wrap');
+    var visible = 0;
+    cards.forEach(function (wrap) {
+      var lat = parseFloat(wrap.dataset.lat);
+      var lng = parseFloat(wrap.dataset.lng);
+      var badge = document.getElementById('dist-' + wrap.dataset.storeId);
+
+      if (!nearbyActive) {
+        wrap.classList.remove('hidden-by-nearby');
+        if (badge) badge.style.display = 'none';
+        return;
+      }
+
+      if (!isNaN(lat) && !isNaN(lng) && userLat !== null) {
+        var dist = haversineM(userLat, userLng, lat, lng);
+        if (dist <= RADIUS_M) {
+          wrap.classList.remove('hidden-by-nearby');
+          if (badge) { badge.textContent = '📍 ' + formatDist(dist); badge.style.display = 'inline-flex'; }
+          visible++;
+        } else {
+          wrap.classList.add('hidden-by-nearby');
+          if (badge) badge.style.display = 'none';
+        }
+      } else {
+        /* Store has no coordinates — hide in nearby mode */
+        wrap.classList.add('hidden-by-nearby');
+        if (badge) badge.style.display = 'none';
+      }
+    });
+
+    document.getElementById('no-nearby-msg').style.display =
+      (nearbyActive && visible === 0) ? 'block' : 'none';
+
+    if (nearbyActive && visible > 0) {
+      setStatus('Showing ' + visible + ' store' + (visible !== 1 ? 's' : '') +
+                ' within ' + RADIUS_M + ' m of your location.', 'success');
+    }
+  }
+
+  function enableNearby() {
+    var btn = document.getElementById('nearby-toggle');
+    btn.classList.add('active');
+    btn.innerHTML = '<span class="spin"></span> Locating…';
+    btn.disabled = true;
+    setStatus('Requesting your location…');
+
+    navigator.geolocation.getCurrentPosition(
+      function (pos) {
+        userLat = pos.coords.latitude;
+        userLng = pos.coords.longitude;
+        nearbyActive = true;
+        btn.innerHTML = '✅ Nearby Only (500 m)';
+        btn.disabled = false;
+        setStatus('');
+        applyFilter();
+      },
+      function (err) {
+        nearbyActive = false;
+        btn.classList.remove('active');
+        btn.innerHTML = '<span class="pulse-dot"></span> Show Nearby Only';
+        btn.disabled = false;
+
+        if (err.code === 1) {
+          /* Permission denied — show browser-specific instructions */
+          showLocationDeniedBanner();
+          setStatus('');
+        } else if (err.code === 2) {
+          setStatus('⚠️ Location unavailable. Check your device GPS and try again.', 'error');
+        } else {
+          setStatus('⚠️ Location request timed out. Please try again.', 'error');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  }
+
+  function disableNearby() {
+    nearbyActive = false;
+    var btn = document.getElementById('nearby-toggle');
+    btn.classList.remove('active');
+    btn.innerHTML = '<span class="pulse-dot"></span> Show Nearby Only';
+    btn.disabled = false;
+    setStatus('');
+    applyFilter();
+  }
+
+  function showLocationDeniedBanner() {
+    var ua = navigator.userAgent;
+    var isIOS = /iPhone|iPad|iPod/.test(ua);
+    var isAndroid = /Android/.test(ua);
+    var isFirefox = /Firefox/.test(ua);
+    var isSafari = /Safari/.test(ua) && !/Chrome/.test(ua);
+    var isChrome = /Chrome/.test(ua) && !/Edge/.test(ua);
+    var isEdge = /Edg\//.test(ua);
+
+    var steps;
+    if (isIOS) {
+      steps = [
+        'Open <strong>Settings</strong> on your iPhone/iPad',
+        'Scroll down and tap <strong>Safari</strong> (or your browser)',
+        'Tap <strong>Location</strong> and set it to <strong>Allow</strong>',
+        'Come back and try again'
+      ];
+    } else if (isAndroid && isChrome) {
+      steps = [
+        'Tap the <strong>🔒 lock icon</strong> in the address bar',
+        'Tap <strong>Permissions → Location</strong>',
+        'Switch it to <strong>Allow</strong>',
+        'Refresh the page and try again'
+      ];
+    } else if (isFirefox) {
+      steps = [
+        'Click the <strong>🔒 lock icon</strong> in the address bar',
+        'Click the <strong>✕</strong> next to Location to clear the block',
+        'Click <strong>Show Nearby Only</strong> again and allow when prompted'
+      ];
+    } else if (isEdge) {
+      steps = [
+        'Click the <strong>🔒 lock icon</strong> in the address bar',
+        'Find <strong>Location</strong> and change it to <strong>Allow</strong>',
+        'Refresh the page and try again'
+      ];
+    } else {
+      /* Chrome desktop / generic */
+      steps = [
+        'Click the <strong>🔒 lock icon</strong> in the address bar',
+        'Find <strong>Location</strong> and set it to <strong>Allow</strong>',
+        'Refresh the page, then click <strong>Show Nearby Only</strong> again'
+      ];
+    }
+
+    var html = '<ol class="banner-steps">' +
+      steps.map(function(s){ return '<li>' + s + '</li>'; }).join('') +
+      '</ol>';
+    document.getElementById('banner-instructions').innerHTML = html;
+    document.getElementById('location-denied-banner').style.display = 'flex';
+  }
+
+  window.toggleNearby = function () {
+    if (!('geolocation' in navigator)) {
+      setStatus('⚠️ Your browser does not support geolocation.', 'error');
+      return;
+    }
+    nearbyActive ? disableNearby() : enableNearby();
+  };
+
+  window.disableNearby = disableNearby;
+})();
+</script>
+
 {% endblock %}

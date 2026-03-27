@@ -5,6 +5,8 @@ Run dev:  python app.py
 Run prod: gunicorn -w 4 -b 0.0.0.0:8000 wsgi:app
 """
 import math
+import requests
+from geopy.geocoders import Nominatim
 import sqlite3, os, json, uuid, base64, io, re, html
 import logging, logging.handlers, time, hashlib
 from collections import defaultdict
@@ -334,18 +336,34 @@ def rate_limit(limit_key):
 _USERNAME_RE = re.compile(r'^[a-z0-9_]{3,40}$')
 def sanitize(v, n=200): return html.escape(str(v or"").strip()[:n])
 def calculate_distance(lat1, lon1, lat2, lon2):
-    R = 6371  # km
+    R = 6371  # Earth radius in km
 
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
 
-    a = (math.sin(dlat/2)**2 +
+    a = (math.sin(dlat/2) ** 2 +
          math.cos(math.radians(lat1)) *
          math.cos(math.radians(lat2)) *
-         math.sin(dlon/2)**2)
+         math.sin(dlon/2) ** 2)
 
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
     return R * c
+
+def geocode_location(query):
+    try:
+        url = "https://nominatim.openstreetmap.org/search"
+        params = {"q": query, "format": "json", "limit": 1}
+        headers = {"User-Agent": "my-flask-app"}
+        response = requests.get(url, params=params, headers=headers, timeout=5)
+        data = response.json()
+        if data:
+            return float(data[0]["lat"]), float(data[0]["lon"])
+    except Exception as e:
+        print("GEOCODING ERROR:", e)
+    return None, None
+
+
 def validate_username(u):
     if not _USERNAME_RE.match(u): return "Username: 3–40 chars, lowercase/numbers/underscores only."
 def validate_price(v):
@@ -472,6 +490,16 @@ def update_analytics(sid):
         (sid,row["t"] or 0,row["comp"] or 0,vis,row["ns"] or 0,rep,row["rev"] or 0,peak))
     conn.commit()
 
+# for getting distance
+def get_coordinates(address):
+    geolocator = Nominatim(user_agent="apna_dukaan")
+
+    location = geolocator.geocode(address)
+
+    if location:
+        return location.latitude, location.longitude
+    return None, None
+
 # ── REVIEW HELPERS ────────────────────────────────────────────────────────────
 def get_avg_rating(ttype, tid):
     r=get_db().execute("SELECT AVG(rating) avg,COUNT(*) cnt FROM reviews WHERE target_type=? AND target_id=?",
@@ -568,7 +596,7 @@ def _register_security_headers(app):
         h = response.headers
         h["X-Content-Type-Options"]="nosniff"; h["X-Frame-Options"]="SAMEORIGIN"
         h["X-XSS-Protection"]="1; mode=block"; h["Referrer-Policy"]="strict-origin-when-cross-origin"
-        h["Permissions-Policy"]="geolocation=(),microphone=(),camera=()"
+        h["Permissions-Policy"]="geolocation=(self),microphone=(),camera=()"
         if app.config.get("SESSION_COOKIE_SECURE"):
             h["Strict-Transport-Security"]="max-age=31536000; includeSubDomains"
         if request.path.startswith(("/owner/","/my-","/control-panel/")):
@@ -652,13 +680,73 @@ def _register_routes(app):
         for s in stores:
             avg,cnt=get_avg_rating("store",s["store_id"])
             pts=get_points(s["store_id"]); tier,icon=get_tier(pts)
-            # Count products for this store
             prod_count=get_db().execute(
                 "SELECT COUNT(*) FROM products WHERE store_id=? AND available=1",(s["store_id"],)
             ).fetchone()[0]
             data.append({"store":s,"points":pts,"tier":tier,"icon":icon,
-                         "avg_rating":avg,"rating_count":cnt,"prod_count":prod_count})
+                         "avg_rating":avg,"rating_count":cnt,"prod_count":prod_count,
+                         "distance":None})
         return render_template("store_list.html",stores=data,customer_name=session["customer_name"])
+
+    @app.route("/api/nearby-stores")
+    @customer_required
+    def api_nearby_stores():
+        """Return stores within radius_m metres of the given lat/lng.
+        Query params: lat, lng, radius (default 500 m).
+        Returns JSON list sorted by distance ascending.
+        """
+        try:
+            user_lat = float(request.args.get("lat", ""))
+            user_lng = float(request.args.get("lng", ""))
+        except (TypeError, ValueError):
+            return jsonify({"error": "lat and lng are required numeric parameters."}), 400
+
+        try:
+            radius_m = float(request.args.get("radius", 500))
+            if radius_m <= 0 or radius_m > 50000:
+                radius_m = 500
+        except (TypeError, ValueError):
+            radius_m = 500
+
+        radius_km = radius_m / 1000.0
+        stores = get_db().execute(
+            "SELECT * FROM stores WHERE is_open=1 AND is_approved=1 "
+            "AND latitude IS NOT NULL AND longitude IS NOT NULL"
+        ).fetchall()
+
+        nearby = []
+        for s in stores:
+            dist_km = calculate_distance(user_lat, user_lng, s["latitude"], s["longitude"])
+            if dist_km <= radius_km:
+                avg, cnt = get_avg_rating("store", s["store_id"])
+                pts = get_points(s["store_id"])
+                tier, icon = get_tier(pts)
+                prod_count = get_db().execute(
+                    "SELECT COUNT(*) FROM products WHERE store_id=? AND available=1",
+                    (s["store_id"],)
+                ).fetchone()[0]
+                nearby.append({
+                    "store_id":     s["store_id"],
+                    "name":         s["name"],
+                    "owner_name":   s["owner_name"],
+                    "address":      s["address"],
+                    "category":     s["category"],
+                    "is_open":      bool(s["is_open"]),
+                    "points":       pts,
+                    "tier":         tier,
+                    "tier_icon":    icon,
+                    "avg_rating":   avg,
+                    "rating_count": cnt,
+                    "prod_count":   prod_count,
+                    "latitude":     s["latitude"],
+                    "longitude":    s["longitude"],
+                    "distance_m":   round(dist_km * 1000, 1),
+                    "image_b64":    s["image_b64"],
+                    "image_mime":   s["image_mime"],
+                })
+
+        nearby.sort(key=lambda x: x["distance_m"])
+        return jsonify({"radius_m": radius_m, "count": len(nearby), "stores": nearby})
 
     @app.route("/store/<store_id>")
     @customer_required
@@ -726,17 +814,55 @@ def _register_routes(app):
                                freq_together=freq,also_browsed=also,existing_review=existing_rev,
                                has_purchased=has_bought,cart=session.get("cart",{}),customer_name=cname)
     
-    @app.route("/search_product")
+    @app.route('/fix_coordinates')
+    def fix_coordinates():
+        import time
+
+        conn = get_db()
+        stores = conn.execute("SELECT store_id, address FROM stores").fetchall()
+        updated = 0
+
+        for s in stores:
+            address = s["address"]
+            if not address:
+                print("❌ Missing address for store_id:", s["store_id"])
+                continue
+
+            full_address = address + ", Kolkata"
+            lat, lng = geocode_location(full_address)
+
+            print(f"Processing: {full_address} -> {lat}, {lng}")
+
+            if lat and lng:
+                conn.execute(
+                    "UPDATE stores SET latitude=?, longitude=? WHERE store_id=?",
+                    (lat, lng, s["store_id"])
+                )
+                updated += 1
+            else:
+                print(f"⚠️ Failed geocoding: {full_address}")
+
+            time.sleep(1)  # prevent rate-limit
+
+        conn.commit()
+        return f"✅ Updated {updated} stores"
+    
+    @app.route("/search_product", methods=['GET', 'POST'])
     @customer_required
     def search_product():
         q = sanitize(request.args.get("q",""),100).lower()
-        user_lat = float(request.args.get("lat", 0))
-        user_lng = float(request.args.get("lng", 0))
+        location_query = request.form.get("address", "")
+
+        if location_query:
+            location_query += ", Kolkata"
+            user_lat, user_lng = geocode_location(location_query)
+        else:
+            user_lat, user_lng = None, None
 
         conn = get_db()
 
         rows = conn.execute("""
-            SELECT p.name, p.price, p.store_id,
+            SELECT p.product_id, p.name, p.price, p.store_id,
                 s.name as store_name, s.latitude, s.longitude
             FROM products p
             JOIN stores s ON p.store_id = s.store_id
@@ -746,22 +872,26 @@ def _register_routes(app):
 
         results = []
         for r in rows:
-            dist = calculate_distance(
-                user_lat, user_lng,
-                r["latitude"] or 0,
-                r["longitude"] or 0
-            )
+            lat = r["latitude"]
+            lng = r["longitude"]
+            if lat is None or lng is None or user_lat is None or user_lng is None:
+                dist = None
+            else:
+                dist = calculate_distance(user_lat, user_lng, lat, lng)
+
             results.append({
+                "product_id": r["product_id"],
                 "product": r["name"],
                 "price": r["price"],
                 "store": r["store_name"],
                 "store_id": r["store_id"],
-                "distance": round(dist, 2),
-                "lat": r["latitude"],
-                "lng": r["longitude"]
+                "distance": round(dist, 2) if dist is not None else None,
+                "lat": lat,
+                "lng": lng
             })
 
-        results.sort(key=lambda x: (x["price"], x["distance"]))
+        results.sort(key=lambda x: (x["price"] if x["distance"] is None else x["distance"],
+                                    x["price"]))
         return render_template("search.html", results=results, query=q)
 
     # ── REVIEWS ───────────────────────────────────────────────────────────────
