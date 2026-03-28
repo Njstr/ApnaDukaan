@@ -4,6 +4,7 @@ New: product images, rich product pages, mutual ratings, AI review summaries, da
 Run dev:  python app.py
 Run prod: gunicorn -w 4 -b 0.0.0.0:8000 wsgi:app
 """
+import uuid
 import math
 import requests
 from geopy.geocoders import Nominatim
@@ -292,7 +293,7 @@ def seed_demo_data(db_path):
         oid = "owner_demo"
         conn.execute("INSERT INTO owners(owner_id,username,password,full_name,phone) VALUES(?,?,?,?,?)",
                      (oid,"demo",generate_password_hash("demo123"),"Demo Owner","9999999999"))
-        sid = "store_demo"
+        sid = str(uuid.uuid4())
         qr  = _make_qr_payload(sid)
         conn.execute("INSERT INTO stores(store_id,owner_id,name,owner_name,address,category,qr_code,points)"
                      " VALUES(?,?,?,?,?,?,?,?)",
@@ -1025,6 +1026,7 @@ def _register_routes(app):
             lng = r["longitude"]
             if lat is None or lng is None or user_lat is None or user_lng is None:
                 dist = None
+                print("Not able to calc dist")
             else:
                 dist = calculate_distance(user_lat, user_lng, lat, lng)
 
