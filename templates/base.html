@@ -23,15 +23,13 @@ a{color:inherit;text-decoration:none;}
   cursor:pointer;
 }
 @media(min-width:769px){
-  /* Hide label text spans on desktop, but keep notif-dot visible */
-  .nav-actions a span:not(.notif-dot) {
+  /* Hide label text on all nav links except nav-highlight */
+  .nav-actions a span:not(.notif-bell-icon):not(.notif-dot) {
     display: none;
   }
-  /* On desktop the bell is a 34px circle - dot stays top-right absolute */
-  .notif-dot {
-    position: absolute;
-    top: -4px;
-    right: -4px;
+  /* nav-highlight items show their label */
+  .nav-highlight span:not(.notif-bell-icon):not(.notif-dot) {
+    display: inline;
   }
 }
 /* Search container */
@@ -131,10 +129,14 @@ a{color:inherit;text-decoration:none;}
   width:34px;height:34px;border-radius:50%;border:1.5px solid var(--border);
   background:var(--card);cursor:pointer;font-size:16px;transition:all .15s;}
 .notif-bell:hover{border-color:var(--orange);background:var(--ol);}
-.notif-dot{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;
+/* Icon+dot wrapper — dot is absolute relative to this, not the full anchor */
+.notif-bell-icon{position:relative;display:inline-flex;align-items:center;justify-content:center;line-height:1;}
+.notif-dot{position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;
   border-radius:50%;min-width:17px;height:17px;font-size:10px;font-weight:700;
-  display:inline-flex;align-items:center;justify-content:center;padding:0 3px;
-  border:2px solid var(--card);line-height:1;}
+  display:flex;align-items:center;justify-content:center;padding:0 3px;
+  border:2px solid var(--card);}
+/* Hide bell label text on desktop — only the icon shows */
+.notif-bell span:not(.notif-bell-icon):not(.notif-dot){display:none;}
 /* Notification list */
 .notif-item{display:flex;gap:12px;padding:14px;border-bottom:1px solid var(--border);
   align-items:flex-start;transition:background .1s;}
@@ -178,7 +180,7 @@ a{color:inherit;text-decoration:none;}
   }
 
   #nav-menu a,
-  #nav-menu span{
+  #nav-menu span:not(.notif-bell-icon):not(.notif-dot){
     padding: 10px 12px;
     width:100%;
   }
@@ -193,23 +195,20 @@ a{color:inherit;text-decoration:none;}
     font-size: 13px;
   }
 
-  /* In the mobile dropdown, bell becomes a full-width row like other items */
+  /* Bell inside dropdown: reset circle shape, go full-width */
   #nav-menu .notif-bell {
-    width: 100%;
+    width: auto;
     height: auto;
     border-radius: 10px;
-    border: 1.5px solid var(--border);
+    padding: 10px 12px;
     justify-content: flex-start;
     gap: 8px;
-    padding: 10px 12px;
-    font-size: 13px;
-    font-weight: 600;
+    font-size: 14px;
   }
 
-  /* In the dropdown, dot sits inline after text — no absolute positioning */
-  #nav-menu .notif-dot {
-    position: static;
-    margin-left: auto;
+  /* Show label text inside dropdown */
+  #nav-menu .notif-bell span:not(.notif-bell-icon):not(.notif-dot) {
+    display: inline;
   }
 
   .nav-search {
@@ -364,7 +363,7 @@ if (_loggedIn && 'serviceWorker' in navigator && 'Notification' in window) {
         <span class="points-pill">🛒 {{ cart_count }} · ₹{{ cart_total }}</span>
       {% endif %}
       <a href="/notifications" class="notif-bell nav-item nav-highlight" title="Notifications">
-        🔔<span class="notif-label"> Notifications</span>{% if notif_count > 0 %}<span class="notif-dot">{{ notif_count if notif_count < 100 else '99+' }}</span>{% endif %}
+        <span class="notif-bell-icon">🔔{% if notif_count > 0 %}<span class="notif-dot">{{ notif_count if notif_count < 100 else '99+' }}</span>{% endif %}</span><span>Notifications</span>
       </a>
       <a href="/customer/logout" class="btn btn-outline btn-sm">Logout</a>
     {% elif session.owner_id %}
@@ -374,7 +373,7 @@ if (_loggedIn && 'serviceWorker' in navigator && 'Notification' in window) {
       <a href="/owner/orders" class="btn btn-outline btn-sm">Orders</a>
       <a href="/owner/analytics" class="btn btn-outline btn-sm">Analytics</a>
       <a href="/owner/notifications" class="notif-bell nav-item nav-highlight" title="Notifications">
-        🔔<span class="notif-label"> Notifications</span>{% if notif_count > 0 %}<span class="notif-dot">{{ notif_count if notif_count < 100 else '99+' }}</span>{% endif %}
+        <span class="notif-bell-icon">🔔{% if notif_count > 0 %}<span class="notif-dot">{{ notif_count if notif_count < 100 else '99+' }}</span>{% endif %}</span><span>Notifications</span>
       </a>
       <a href="/owner/logout" class="btn btn-outline btn-sm">Logout</a>
     {% endif %}

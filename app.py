@@ -1281,7 +1281,16 @@ def _register_routes(app):
         if not order: flash("No active order found for this store.","error"); return redirect(url_for("qr_scan"))
         if conn.execute("SELECT 1 FROM visits WHERE order_id=?",(order["order_id"],)).fetchone():
             flash("Visit already verified.","info"); return redirect(url_for("confirm_receipt",order_id=order["order_id"]))
-        now=datetime.now().strftime("%H:%M"); within=order["start_time"]<=now<=order["end_time"]
+        now_dt   = datetime.now()
+        now_time = now_dt.strftime("%H:%M")
+        pickup   = order["pickup_date"]
+        today    = now_dt.strftime("%Y-%m-%d")
+        if pickup > today:
+            within = True   # future date — slot hasn't started, never penalise
+        elif pickup == today:
+            within = order["start_time"] <= now_time <= order["end_time"]
+        else:
+            within = False  # past pickup date — genuinely missed
         conn.execute("INSERT INTO visits(visit_id,order_id,store_id,customer_name,within_slot,verified) VALUES(?,?,?,?,?,1)",
                      (str(uuid.uuid4()),order["order_id"],sid,name,1 if within else 0))
         conn.execute("UPDATE orders SET status='visited',visit_verified=1 WHERE order_id=?",(order["order_id"],))

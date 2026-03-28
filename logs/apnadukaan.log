@@ -938,3 +938,126 @@
 2026-03-27 22:14:41 INFO GET /stores ip=192.168.29.53 u=njstar role=customer
 2026-03-27 22:17:16 INFO GET /stores ip=192.168.29.53 u=njstar role=customer
 2026-03-27 22:23:03 INFO GET /stores ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:01:30 INFO GET / ip=192.168.29.53 u=anon role=-
+2026-03-28 06:01:30 INFO GET /favicon.ico ip=192.168.29.53 u=anon role=-
+2026-03-28 06:01:34 INFO GET /customer ip=192.168.29.53 u=anon role=-
+2026-03-28 06:01:36 INFO POST /customer ip=192.168.29.53 u=anon role=-
+2026-03-28 06:01:36 INFO GET /stores ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:01:37 INFO GET /store/store_b2df32bc ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:01:42 INFO POST /cart/add ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:01:43 INFO GET /checkout/store_b2df32bc ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:01:49 INFO POST /order/place ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:01:50 INFO GET /order/ORD-EEF1B4D0 ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:01:52 INFO GET /notifications ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:01:59 INFO GET /customer/logout ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:01:59 INFO GET / ip=192.168.29.53 u=anon role=-
+2026-03-28 06:02:06 INFO GET /owner/register ip=192.168.29.53 u=anon role=-
+2026-03-28 06:02:09 INFO GET /owner/login ip=192.168.29.53 u=anon role=-
+2026-03-28 06:02:19 INFO POST /owner/login ip=192.168.29.53 u=anon role=-
+2026-03-28 06:02:20 INFO GET /owner/dashboard ip=192.168.29.53 u=neehal jaju role=owner
+2026-03-28 06:06:47 INFO GET / ip=192.168.29.53 u=anon role=-
+2026-03-28 06:06:49 INFO GET /customer ip=192.168.29.53 u=anon role=-
+2026-03-28 06:06:51 INFO POST /customer ip=192.168.29.53 u=anon role=-
+2026-03-28 06:06:51 INFO GET /stores ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:06:52 INFO GET /store/store_b2df32bc ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:06:54 INFO POST /cart/add ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:06:56 INFO GET /checkout/store_b2df32bc ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:07:02 INFO POST /order/place ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:07:02 INFO GET /order/ORD-D842C347 ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:07:05 INFO GET /notifications ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:07:07 INFO GET /notifications ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:07:47 INFO GET /my-orders ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:07:49 INFO GET /scan ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:07:50 INFO POST /scan ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:07:50 INFO GET /verify-visit ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:07:50 INFO GET /confirm-receipt/ORD-D842C347 ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:07:52 INFO POST /confirm-receipt/ORD-D842C347 ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:07:52 INFO GET /my-orders ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:07:56 INFO GET /notifications ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:10:02 INFO GET /notifications ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:10:08 INFO GET /my-orders ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:10:09 INFO GET /scan ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:10:11 INFO POST /scan ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:10:11 INFO GET /verify-visit ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:10:11 INFO GET /confirm-receipt/ORD-EEF1B4D0 ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:10:13 INFO GET /notifications ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:10:15 INFO GET /my-orders ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:10:18 INFO GET / ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:10:18 INFO GET /stores ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:16:22 INFO GET /stores ip=192.168.29.53 u=anon role=-
+2026-03-28 06:16:22 INFO GET /customer ip=192.168.29.53 u=anon role=-
+2026-03-28 06:16:25 INFO POST /customer ip=192.168.29.53 u=anon role=-
+2026-03-28 06:16:25 INFO GET /stores ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:16:32 INFO GET /store/store_b2df32bc ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:16:36 INFO GET /stores ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:16:38 INFO GET / ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:16:38 INFO GET /stores ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:17:00 INFO GET /store/store_b2df32bc ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:17:02 INFO POST /cart/add ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:17:04 INFO GET /checkout/store_b2df32bc ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:17:09 INFO POST /order/place ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:17:09 INFO GET /order/ORD-2AA48079 ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:17:15 INFO GET /scan ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:17:19 INFO POST /scan ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:17:19 INFO GET /verify-visit ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:17:19 INFO GET /confirm-receipt/ORD-2AA48079 ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:17:22 INFO POST /confirm-receipt/ORD-2AA48079 ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:17:22 INFO GET /my-orders ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:17:25 INFO GET /notifications ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:18:36 INFO GET /notifications ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:18:38 INFO GET / ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:18:38 INFO GET /stores ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:18:39 INFO GET /store/store_b2df32bc ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:18:41 INFO POST /cart/add ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:18:41 INFO POST /cart/add ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:18:41 INFO POST /cart/add ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:18:42 INFO POST /cart/add ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:18:43 INFO GET /checkout/store_b2df32bc ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:18:48 INFO POST /order/place ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:18:48 INFO GET /order/ORD-5E27D3BB ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:18:50 INFO GET /scan ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:18:52 INFO POST /scan ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:18:52 INFO GET /verify-visit ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:18:52 INFO GET /confirm-receipt/ORD-5E27D3BB ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:18:54 INFO POST /confirm-receipt/ORD-5E27D3BB ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:18:54 INFO GET /my-orders ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:18:57 INFO GET /notifications ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:19:14 INFO GET / ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:19:14 INFO GET /stores ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:19:16 INFO GET /store/store_b2df32bc ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:19:17 INFO POST /cart/add ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:19:18 INFO POST /cart/add ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:19:18 INFO POST /cart/add ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:19:18 INFO POST /cart/add ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:19:18 INFO POST /cart/add ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:19:19 INFO GET /checkout/store_b2df32bc ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:19:32 INFO POST /order/place ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:19:32 INFO GET /order/ORD-FE1BC6C1 ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:19:34 INFO GET /scan ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:19:35 INFO POST /scan ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:19:35 INFO GET /verify-visit ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:19:35 INFO GET /confirm-receipt/ORD-FE1BC6C1 ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:19:36 INFO POST /confirm-receipt/ORD-FE1BC6C1 ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:19:36 INFO GET /my-orders ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:19:38 INFO GET /notifications ip=192.168.29.53 u=basmati rice role=customer
+2026-03-28 06:20:49 INFO GET / ip=192.168.29.53 u=anon role=-
+2026-03-28 06:20:51 INFO GET /customer ip=192.168.29.53 u=anon role=-
+2026-03-28 06:20:53 INFO POST /customer ip=192.168.29.53 u=anon role=-
+2026-03-28 06:20:53 INFO GET /stores ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:20:56 INFO GET /store/store_b2df32bc ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:20:58 INFO POST /cart/add ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:20:58 INFO POST /cart/add ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:20:59 INFO POST /cart/add ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:21:00 INFO GET /checkout/store_b2df32bc ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:21:05 INFO POST /order/place ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:21:05 INFO GET /order/ORD-A617A03E ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:21:07 INFO GET /scan ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:21:09 INFO POST /scan ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:21:09 INFO GET /verify-visit ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:21:09 INFO GET /confirm-receipt/ORD-A617A03E ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:21:10 INFO POST /confirm-receipt/ORD-A617A03E ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:21:10 INFO GET /my-orders ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:21:12 INFO GET /notifications ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:21:19 INFO GET /my-points ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:21:24 INFO GET / ip=192.168.29.53 u=njstar role=customer
+2026-03-28 06:21:24 INFO GET /stores ip=192.168.29.53 u=njstar role=customer

@@ -163,8 +163,8 @@
       {% set s = item.store %}
         <div class="store-card-wrap"
             data-store-id="{{ s.store_id }}"
-            data-lat="{{ s.latitude if s.latitude else '' }}"
-            data-lng="{{ s.longitude if s.longitude else '' }}">
+            data-lat="{{ item.lat if item.lat is not none else '' }}"
+            data-lng="{{ item.lng if item.lng is not none else '' }}">
           <a href="/store/{{ s.store_id }}" style="display:block; height:100%;">
             <div class="card" style="height:100%; transition:all .2s; cursor:pointer; padding:0; overflow:hidden;"
                 onmouseover="this.style.borderColor='var(--orange)'; this.style.transform='translateY(-2px)'"
