@@ -374,13 +374,14 @@ def geocode_location(query):
     try:
         url = "https://nominatim.openstreetmap.org/search"
         params = {"q": query, "format": "json", "limit": 1}
-        headers = {"User-Agent": "my-flask-app"}
+        headers = {"User-Agent": "ApnaDukaan/1.0 (store-locator; contact@apnadukaan.in)"}
         response = requests.get(url, params=params, headers=headers, timeout=5)
+        response.raise_for_status()
         data = response.json()
         if data:
             return float(data[0]["lat"]), float(data[0]["lon"])
     except Exception as e:
-        print("GEOCODING ERROR:", e)
+        import logging; logging.getLogger(__name__).warning("GEOCODING ERROR for %r: %s", query, e)
     return None, None
 
 
@@ -833,7 +834,7 @@ def _register_routes(app):
             ).fetchone()[0]
             data.append({"store":s,"points":pts,"tier":tier,"icon":icon,
                          "avg_rating":avg,"rating_count":cnt,"prod_count":prod_count,
-                         "distance":None})
+                         "lat":s["latitude"],"lng":s["longitude"],"distance":None})
         return render_template("store_list.html",stores=data,customer_name=session["customer_name"])
 
     @app.route("/api/nearby-stores")
@@ -1281,16 +1282,7 @@ def _register_routes(app):
         if not order: flash("No active order found for this store.","error"); return redirect(url_for("qr_scan"))
         if conn.execute("SELECT 1 FROM visits WHERE order_id=?",(order["order_id"],)).fetchone():
             flash("Visit already verified.","info"); return redirect(url_for("confirm_receipt",order_id=order["order_id"]))
-        now_dt   = datetime.now()
-        now_time = now_dt.strftime("%H:%M")
-        pickup   = order["pickup_date"]
-        today    = now_dt.strftime("%Y-%m-%d")
-        if pickup > today:
-            within = True   # future date — slot hasn't started, never penalise
-        elif pickup == today:
-            within = order["start_time"] <= now_time <= order["end_time"]
-        else:
-            within = False  # past pickup date — genuinely missed
+        now=datetime.now().strftime("%H:%M"); within=order["start_time"]<=now<=order["end_time"]
         conn.execute("INSERT INTO visits(visit_id,order_id,store_id,customer_name,within_slot,verified) VALUES(?,?,?,?,?,1)",
                      (str(uuid.uuid4()),order["order_id"],sid,name,1 if within else 0))
         conn.execute("UPDATE orders SET status='visited',visit_verified=1 WHERE order_id=?",(order["order_id"],))
@@ -1384,8 +1376,9 @@ def _register_routes(app):
             conn.execute("INSERT INTO owners(owner_id,username,password,full_name,phone) VALUES(?,?,?,?,?)",
                          (oid,username,generate_password_hash(password),full_name,phone))
             sid="store_"+str(uuid.uuid4())[:8]; qr=_make_qr_payload(sid)
-            conn.execute("INSERT INTO stores(store_id,owner_id,name,owner_name,address,category,qr_code) VALUES(?,?,?,?,?,?,?)",
-                         (sid,oid,store_name,full_name,address,category,qr))
+            lat, lng = geocode_location(address) if address else (None, None)
+            conn.execute("INSERT INTO stores(store_id,owner_id,name,owner_name,address,category,qr_code,latitude,longitude) VALUES(?,?,?,?,?,?,?,?,?)",
+                         (sid,oid,store_name,full_name,address,category,qr,lat,lng))
             conn.execute("INSERT INTO store_analytics(store_id) VALUES(?)",(sid,))
             conn.execute("INSERT INTO points(entity_id,entity_type,total_points) VALUES(?,?,0)",(sid,"store"))
             conn.commit(); _insert_default_slots(conn,sid); conn.commit()
@@ -1470,9 +1463,14 @@ def _register_routes(app):
                     except ValueError as e:
                         flash(str(e),"error")
                         return render_template("owner_store_settings.html",store=store,categories=STORE_CATEGORIES)
+                lat, lng = store["latitude"], store["longitude"]
+                if address and (address != store["address"] or lat is None or lng is None):
+                    new_lat, new_lng = geocode_location(address)
+                    if new_lat is not None:
+                        lat, lng = new_lat, new_lng
                 conn.execute(
-                    "UPDATE stores SET name=?,address=?,category=?,is_open=?,description=?,image_b64=?,image_mime=? WHERE store_id=?",
-                    (name,address,category,is_open,description,img_b64,img_mime,sid))
+                    "UPDATE stores SET name=?,address=?,category=?,is_open=?,description=?,image_b64=?,image_mime=?,latitude=?,longitude=? WHERE store_id=?",
+                    (name,address,category,is_open,description,img_b64,img_mime,lat,lng,sid))
                 conn.commit()
                 flash("Store settings updated.","success"); return redirect(url_for("owner_store_settings"))
         return render_template("owner_store_settings.html",store=store,categories=STORE_CATEGORIES)

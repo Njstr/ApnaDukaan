@@ -1061,3 +1061,8 @@
 2026-03-28 06:21:19 INFO GET /my-points ip=192.168.29.53 u=njstar role=customer
 2026-03-28 06:21:24 INFO GET / ip=192.168.29.53 u=njstar role=customer
 2026-03-28 06:21:24 INFO GET /stores ip=192.168.29.53 u=njstar role=customer
+2026-03-28 08:39:36 INFO GET / ip=192.168.29.53 u=anon role=-
+2026-03-28 08:39:37 INFO GET /favicon.ico ip=192.168.29.53 u=anon role=-
+2026-03-28 08:39:40 INFO GET /customer ip=192.168.29.53 u=anon role=-
+2026-03-28 08:39:43 INFO POST /customer ip=192.168.29.53 u=anon role=-
+2026-03-28 08:39:43 INFO GET /stores ip=192.168.29.53 u=njstar role=customer
